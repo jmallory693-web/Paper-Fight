@@ -1060,7 +1060,7 @@ class BattleApp:
         self.action_hint = tk.StringVar(
             value="Swing trades blows, Block softens hits, Power Strike deals heavy damage (2-turn cooldown)."
         )
-        self.phase_info_var = tk.StringVar(value="Preparation: use Shop or Recruit, then strike to begin.")
+        self.phase_info_var = tk.StringVar(value="Preparation: visit Town, then strike to begin.")
         ttk.Label(info_panel, textvariable=self.status_var, font=("Segoe UI", 10, "bold"), wraplength=300).pack(
             anchor="nw", pady=(0, 6)
         )
@@ -1086,21 +1086,14 @@ class BattleApp:
             footer, text="Save Run", command=self.save_run_menu, state=tk.DISABLED
         )
         self.save_run_footer_btn.pack(side=tk.LEFT, padx=4)
-        self.character_btn = ttk.Button(footer, text="Character", command=self.open_character_panel, state=tk.DISABLED)
-        self.character_btn.pack(side=tk.RIGHT, padx=4)
-        self.recruit_btn = ttk.Button(footer, text="Recruit", command=self.open_recruit, state=tk.DISABLED)
-        self.recruit_btn.pack(side=tk.RIGHT, padx=4)
+        self.town_btn = ttk.Button(footer, text="Town", command=self.open_town, state=tk.DISABLED)
+        self.town_btn.pack(side=tk.RIGHT, padx=4)
         self.use_item_btn = ttk.Button(footer, text="Use Item", command=self.open_use_consumables_dialog, state=tk.DISABLED)
         self.use_item_btn.pack(side=tk.RIGHT, padx=4)
-        self.shop_btn = ttk.Button(footer, text="Shop", command=self.open_shop, state=tk.DISABLED)
-        self.shop_btn.pack(side=tk.RIGHT, padx=4)
-        self.play_again_btn = ttk.Button(
-            footer, text="Start New Run", command=self.start_new_run, state=tk.DISABLED
-        )
-        self.play_again_btn.pack(side=tk.RIGHT, padx=4)
 
         self._build_embedded_shop_screen()
         self._build_embedded_recruit_screen()
+        self._build_embedded_town_screen()
         self._build_embedded_admin_screen()
 
     def _build_embedded_shop_screen(self):
@@ -1167,6 +1160,44 @@ class BattleApp:
         recruit_actions = ttk.Frame(self.recruit_frame)
         recruit_actions.pack(fill=tk.X, pady=(8, 0))
         ttk.Button(recruit_actions, text="Back to Arena", command=self.close_recruit, width=18).pack(side=tk.LEFT)
+
+    def _build_embedded_town_screen(self):
+        """Town hub for non-combat services between fights."""
+        self.town_frame = ttk.Frame(self.root, padding=16)
+        self.town_frame.pack_forget()
+        ttk.Label(self.town_frame, text="Town", font=("Segoe UI", 18, "bold")).pack(pady=(8, 4))
+        ttk.Label(
+            self.town_frame,
+            text="Prepare between duels — shop, recruit allies, review your character, and use healing items.",
+            wraplength=520,
+        ).pack(pady=(4, 10))
+
+        services = ttk.LabelFrame(self.town_frame, text="Services", padding=12)
+        services.pack(fill=tk.X, pady=6)
+        self.town_character_btn = ttk.Button(
+            services, text="Character", command=self.open_character_panel, width=22
+        )
+        self.town_character_btn.pack(anchor="w", pady=4)
+        self.town_shop_btn = ttk.Button(services, text="Shop", command=self.open_shop, width=22)
+        self.town_shop_btn.pack(anchor="w", pady=4)
+        self.town_recruit_btn = ttk.Button(services, text="Recruit", command=self.open_recruit, width=22)
+        self.town_recruit_btn.pack(anchor="w", pady=4)
+        self.town_use_item_btn = ttk.Button(
+            services, text="Use Item", command=self.open_use_consumables_dialog, width=22
+        )
+        self.town_use_item_btn.pack(anchor="w", pady=4)
+
+        town_actions = ttk.Frame(self.town_frame)
+        town_actions.pack(fill=tk.X, pady=(12, 0))
+        ttk.Button(town_actions, text="Return to Arena", command=self.close_town, width=18).pack(side=tk.LEFT)
+        self.town_save_run_btn = ttk.Button(
+            town_actions, text="Save Run", command=self.save_run_menu, state=tk.DISABLED
+        )
+        self.town_save_run_btn.pack(side=tk.LEFT, padx=8)
+        self.town_main_menu_btn = ttk.Button(
+            town_actions, text="Main Menu", command=self.return_to_main_menu, width=18
+        )
+        self.town_main_menu_btn.pack(side=tk.RIGHT)
 
     def _build_embedded_admin_screen(self):
         """Admin tools as a full in-game screen (not a popup)."""
@@ -2041,16 +2072,51 @@ class BattleApp:
         self._player_damage_reduction_amount = 0
         return reduced, True
 
-    def update_use_item_button(self):
+    def _has_combat_usable_consumables(self):
+        if not self.in_combat or not self.player.alive():
+            return False
+        for entry in self.owned_consumables():
+            template = entry["template"]
+            if not get_consumable_template(template.get("id"), self.shop_consumables):
+                continue
+            timing = template.get("timing", "both")
+            if timing not in ("combat", "both"):
+                continue
+            if self.consumable_quantity(template["id"]) <= 0:
+                continue
+            return True
+        return False
+
+    def _has_preparation_usable_consumables(self):
+        if not self.can_visit_town():
+            return False
+        for entry in self.owned_consumables():
+            template = entry["template"]
+            if not get_consumable_template(template.get("id"), self.shop_consumables):
+                continue
+            timing = template.get("timing", "both")
+            if timing not in ("preparation", "both"):
+                continue
+            if self.consumable_quantity(template["id"]) <= 0:
+                continue
+            return True
+        return False
+
+    def _update_arena_use_item_button(self):
         if not hasattr(self, "use_item_btn"):
             return
-        if not self.can_use_consumables_now():
-            self.use_item_btn.configure(state=tk.DISABLED)
-            return
-        has_usable = any(
-            self.can_use_consumable(entry["template"]) for entry in self.owned_consumables()
-        )
+        has_usable = self._has_combat_usable_consumables()
         self.use_item_btn.configure(state=tk.NORMAL if has_usable else tk.DISABLED)
+
+    def _update_town_use_item_button(self):
+        if not hasattr(self, "town_use_item_btn"):
+            return
+        has_usable = self._has_preparation_usable_consumables()
+        self.town_use_item_btn.configure(state=tk.NORMAL if has_usable else tk.DISABLED)
+
+    def update_use_item_button(self):
+        self._update_arena_use_item_button()
+        self._update_town_use_item_button()
 
     def open_use_consumables_dialog(self):
         if not self.can_use_consumables_now():
@@ -2376,7 +2442,7 @@ class BattleApp:
             if self.in_preparation and not self.awaiting_reward:
                 self.status_var.set("Ready to engage")
                 self.phase_info_var.set(
-                    "Preparation phase — Shop and Recruit are open. Strike first when you are ready."
+                    "Preparation phase — visit Town to prepare. Strike first when you are ready."
                 )
         else:
             self.show_main_menu()
@@ -2506,6 +2572,7 @@ class BattleApp:
             "main_frame",
             "shop_frame",
             "recruit_frame",
+            "town_frame",
             "admin_frame",
         ):
             frame = getattr(self, frame_name, None)
@@ -2536,6 +2603,53 @@ class BattleApp:
             self.save_run_btn.configure(state=state)
         if hasattr(self, "save_run_footer_btn"):
             self.save_run_footer_btn.configure(state=state)
+        if hasattr(self, "town_save_run_btn"):
+            self.town_save_run_btn.configure(state=state)
+
+    def can_visit_town(self):
+        return (
+            self.run_started
+            and self.player.alive()
+            and self.in_preparation
+            and not self.in_combat
+            and not self.awaiting_reward
+        )
+
+    def open_town(self):
+        if not self.can_visit_town():
+            self.log("You cannot visit Town right now.")
+            return
+        self.hide_all_screens()
+        self.town_frame.pack(fill=tk.BOTH, expand=True)
+        self.update_town_buttons()
+
+    def close_town(self):
+        if self.run_started:
+            self.show_battle_screen()
+            if self.in_preparation and not self.awaiting_reward:
+                self.status_var.set("Ready to engage")
+                self.phase_info_var.set(
+                    "Preparation phase — visit Town to prepare. Strike first when you are ready."
+                )
+        else:
+            self.show_main_menu()
+
+    def update_town_button(self):
+        if not hasattr(self, "town_btn"):
+            return
+        self.town_btn.configure(state=tk.NORMAL if self.can_visit_town() else tk.DISABLED)
+
+    def update_town_buttons(self):
+        self.update_town_button()
+        self.update_save_run_buttons()
+        if not hasattr(self, "town_character_btn"):
+            return
+        ready = self.can_visit_town()
+        service_state = tk.NORMAL if ready else tk.DISABLED
+        self.town_character_btn.configure(state=service_state)
+        self.town_shop_btn.configure(state=service_state)
+        self.town_recruit_btn.configure(state=service_state)
+        self._update_town_use_item_button()
 
     def update_menu_buttons(self):
         if hasattr(self, "save_build_btn"):
@@ -3041,14 +3155,11 @@ class BattleApp:
 
     def restore_run_phase_after_load(self):
         self.cancel_scheduled_fight()
-        self.play_again_btn.configure(state=tk.DISABLED)
         self.main_menu_btn.configure(state=tk.NORMAL)
-        self.character_btn.configure(state=tk.NORMAL)
         self.update_save_run_buttons()
+        self.update_town_button()
 
         if self.in_combat:
-            self.shop_btn.configure(state=tk.DISABLED)
-            self.recruit_btn.configure(state=tk.DISABLED)
             self.set_action_buttons_for_phase()
             self.status_var.set(f"Duel underway against {enemy_display_name(self.enemy)}.")
             self.phase_info_var.set("Mercenaries act automatically after your move each turn.")
@@ -3270,7 +3381,7 @@ class BattleApp:
             f"A new run begins as a {self.selected_race} {role_label} warrior on {self.selected_difficulty} difficulty."
         )
         self.log("Your chosen build is ready. The arena calls your name.")
-        self.log("Take your time in preparation — Shop and Recruit are open before each duel.")
+        self.log("Take your time in preparation — visit Town before each duel.")
         self.log("Combat begins when you choose your first move.")
         self.enter_preparation_phase(first_fight=True, announce_opponent=True)
 
@@ -3470,6 +3581,7 @@ class BattleApp:
         self.block_btn.configure(state=state)
         self.update_power_strike_button()
         self.update_use_item_button()
+        self.update_town_button()
 
     def update_power_strike_button(self):
         can_act = self.in_combat or self.awaiting_first_strike
@@ -3484,34 +3596,29 @@ class BattleApp:
             self.progress_cooldown_var.set("Power Strike: ready")
 
     def enter_preparation_phase(self, first_fight=False, announce_opponent=False):
-        """Pre-battle phase: Shop and Recruit freely; combat starts on first strike."""
+        """Pre-battle phase: Town services open; combat starts on first strike."""
         self.cancel_scheduled_fight()
         self.in_combat = False
         self.in_preparation = True
         self.awaiting_first_strike = not self.awaiting_reward
-        ready = not self.awaiting_reward
-        self.shop_btn.configure(state=tk.NORMAL if ready else tk.DISABLED)
-        self.recruit_btn.configure(state=tk.NORMAL if ready else tk.DISABLED)
-        self.character_btn.configure(state=tk.NORMAL)
-        self.play_again_btn.configure(state=tk.DISABLED)
         self.main_menu_btn.configure(state=tk.NORMAL)
         self.update_save_run_buttons()
+        self.update_town_button()
         self.set_action_buttons_for_phase()
         self.refresh_stats()
         if self.awaiting_reward:
             self.status_var.set("Victory! Choose your reward.")
-            self.phase_info_var.set("Pick a reward, then prepare at Shop or Recruit.")
+            self.phase_info_var.set("Pick a reward, then visit Town to prepare.")
         elif first_fight:
             self.status_var.set("Ready to engage")
             self.phase_info_var.set(
                 f"{enemy_display_name(self.enemy)} stands across the arena. "
-                "Use Shop or Recruit, then choose your first move."
+                "Visit Town to prepare, then choose your first move."
             )
         else:
             self.status_var.set("Ready to engage")
             self.phase_info_var.set(
-                "Preparation phase — Shop and Recruit are open. "
-                "Strike first when you are ready."
+                "Preparation phase — visit Town to prepare. Strike first when you are ready."
             )
         if announce_opponent and not self.awaiting_reward:
             self.log(f"\n{enemy_display_name(self.enemy)} awaits your challenge.")
@@ -3530,8 +3637,7 @@ class BattleApp:
             self.log(f"Your opening strike wounds {enemy_display_name(self.enemy)} for {wound} HP before the fight!")
             self.next_enemy_wounded = False
         self.in_combat = True
-        self.shop_btn.configure(state=tk.DISABLED)
-        self.recruit_btn.configure(state=tk.DISABLED)
+        self.update_town_button()
         for mercenary in self.active_mercenaries:
             if mercenary.alive():
                 mercenary.last_action = "Ready"
@@ -3588,7 +3694,7 @@ class BattleApp:
             if self.in_preparation and not self.awaiting_reward:
                 self.status_var.set("Ready to engage")
                 self.phase_info_var.set(
-                    "Preparation phase — Shop and Recruit are open. Strike first when you are ready."
+                    "Preparation phase — visit Town to prepare. Strike first when you are ready."
                 )
         else:
             self.show_main_menu()
@@ -4090,10 +4196,7 @@ class BattleApp:
             self.in_preparation = False
             self.awaiting_first_strike = False
             self.set_action_buttons_for_phase()
-            self.play_again_btn.configure(state=tk.NORMAL)
-            self.shop_btn.configure(state=tk.DISABLED)
-            self.recruit_btn.configure(state=tk.DISABLED)
-            self.character_btn.configure(state=tk.DISABLED)
+            self.update_town_button()
             self.main_menu_btn.configure(state=tk.NORMAL)
             self.update_save_run_buttons()
             self.status_var.set("Defeat: your warrior falls.")
