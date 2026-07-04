@@ -33,6 +33,33 @@ COMBAT_ROLE_DESCS = {
     "cavalry": "Fast striker. Beats Ranged.",
 }
 
+BOSS_NAME_PARTS = [
+    "Grimfang",
+    "Bloodhide",
+    "Ironclaw",
+    "Skittermaw",
+    "Blacktooth",
+    "Stonehide",
+    "Redmaw",
+    "Nightfang",
+]
+BOSS_EPITHETS = [
+    "the Unbroken",
+    "the Cruel",
+    "the Arena King",
+    "the Champion",
+    "the Bonebreaker",
+    "the Red-Eyed",
+    "the Scarred",
+    "the Old Terror",
+]
+BOSS_ATTACK_BONUS = 2
+BOSS_DEFENSE_BONUS = 1
+BOSS_HP_BONUS_MIN = 10
+BOSS_HP_BONUS_MAX = 20
+BOSS_XP_BONUS = 5
+BOSS_COIN_BONUS = 5
+
 DIFFICULTIES = {
     "Easy": {
         "attack_mod": -1,
@@ -362,6 +389,22 @@ def reward_options_to_json(options):
     return [[label, detail, key, value] for label, detail, key, value in options]
 
 
+def is_boss_level(level):
+    return level > 0 and level % 5 == 0
+
+
+def generate_boss_name(theme):
+    prefix = random.choice(BOSS_NAME_PARTS)
+    epithet = random.choice(BOSS_EPITHETS)
+    return f"{prefix} {epithet}"
+
+
+def enemy_display_name(enemy):
+    if getattr(enemy, "is_boss", False) and getattr(enemy, "boss_name", ""):
+        return enemy.boss_name
+    return enemy.enemy_type or enemy.name
+
+
 def reward_options_from_json(data):
     if not isinstance(data, list):
         return None
@@ -424,6 +467,8 @@ class Combatant:
         ai_style="balanced",
         enemy_type="",
         combat_role=None,
+        is_boss=False,
+        boss_name="",
     ):
         self.name = name
         self.attack = attack
@@ -435,6 +480,8 @@ class Combatant:
         self.ai_style = ai_style
         self.enemy_type = enemy_type
         self.combat_role = combat_role
+        self.is_boss = is_boss
+        self.boss_name = boss_name
 
     def alive(self):
         return self.health > 0
@@ -1880,7 +1927,7 @@ class BattleApp:
                 if random.random() < 0.4:
                     counter = self.compute_damage(self.enemy, mercenary.to_combatant())
                     mercenary.health -= counter
-                    self.log(f"{self.enemy.enemy_type} clips {mercenary.name} for {counter} damage!")
+                    self.log(f"{enemy_display_name(self.enemy)} clips {mercenary.name} for {counter} damage!")
             else:
                 mercenary.last_action = "Block"
                 self.log(f"{mercenary.name} holds position and braces.")
@@ -2106,6 +2153,9 @@ class BattleApp:
                 phase = "reward pending"
             else:
                 phase = "preparation"
+            enemy = run.get("enemy")
+            if isinstance(enemy, dict) and enemy.get("is_boss"):
+                phase = f"{phase}, BOSS"
             return f"L{level} {race}, {defeated} foes, {phase}"
         except (AttributeError, TypeError, ValueError):
             return "Corrupt save"
@@ -2255,6 +2305,8 @@ class BattleApp:
             "ai_style": self.enemy.ai_style,
             "enemy_type": self.enemy.enemy_type,
             "combat_role": self.enemy.combat_role,
+            "is_boss": self.enemy.is_boss,
+            "boss_name": self.enemy.boss_name,
         }
 
     def enemy_from_dict(self, data):
@@ -2277,6 +2329,8 @@ class BattleApp:
             ai_style=data.get("ai_style", "balanced"),
             enemy_type=data.get("enemy_type", ""),
             combat_role=combat_role,
+            is_boss=bool(data.get("is_boss", False)),
+            boss_name=str(data.get("boss_name", "")) if data.get("is_boss", False) else "",
         )
         enemy.health = data["health"]
         return enemy
@@ -2433,7 +2487,7 @@ class BattleApp:
             self.shop_btn.configure(state=tk.DISABLED)
             self.recruit_btn.configure(state=tk.DISABLED)
             self.set_action_buttons_for_phase()
-            self.status_var.set(f"Duel underway against {self.enemy.enemy_type}.")
+            self.status_var.set(f"Duel underway against {enemy_display_name(self.enemy)}.")
             self.phase_info_var.set("Mercenaries act automatically after your move each turn.")
             self.refresh_stats()
         elif self.awaiting_reward:
@@ -2879,7 +2933,7 @@ class BattleApp:
         elif first_fight:
             self.status_var.set("Ready to engage")
             self.phase_info_var.set(
-                f"{self.enemy.enemy_type} stands across the arena. "
+                f"{enemy_display_name(self.enemy)} stands across the arena. "
                 "Use Shop or Recruit, then choose your first move."
             )
         else:
@@ -2889,7 +2943,7 @@ class BattleApp:
                 "Strike first when you are ready."
             )
         if announce_opponent and not self.awaiting_reward:
-            self.log(f"\n{self.enemy.enemy_type} awaits your challenge.")
+            self.log(f"\n{enemy_display_name(self.enemy)} awaits your challenge.")
             if self.enemy.flavor:
                 self.log(self.enemy.flavor)
 
@@ -2902,7 +2956,7 @@ class BattleApp:
         if self.next_enemy_wounded:
             wound = max(1, int(self.enemy.max_health * 0.25))
             self.enemy.health = max(1, self.enemy.health - wound)
-            self.log(f"Your opening strike wounds {self.enemy.enemy_type} for {wound} HP before the fight!")
+            self.log(f"Your opening strike wounds {enemy_display_name(self.enemy)} for {wound} HP before the fight!")
             self.next_enemy_wounded = False
         self.in_combat = True
         self.shop_btn.configure(state=tk.DISABLED)
@@ -2911,9 +2965,9 @@ class BattleApp:
             if mercenary.alive():
                 mercenary.last_action = "Ready"
         self.set_action_buttons_for_phase()
-        self.status_var.set(f"Duel underway against {self.enemy.enemy_type}.")
+        self.status_var.set(f"Duel underway against {enemy_display_name(self.enemy)}.")
         self.phase_info_var.set("Mercenaries act automatically after your move each turn.")
-        self.log(f"\nYou engage {self.enemy.enemy_type}!")
+        self.log(f"\nYou engage {enemy_display_name(self.enemy)}!")
         self.refresh_stats()
 
     def open_shop(self):
@@ -3130,9 +3184,11 @@ class BattleApp:
             style_label = self._enemy_ai_style_label(self.enemy.ai_style)
             flavor = self.enemy.flavor or "No scouting report available."
             role_label = format_combat_role(self.enemy.combat_role)
+            boss_status = "Status: BOSS\n" if self.enemy.is_boss else ""
             self.enemy_preview_var.set(
-                f"Name: {self.enemy.enemy_type}\n"
+                f"Name: {enemy_display_name(self.enemy)}\n"
                 f"Level: {self.enemy.level}\n"
+                f"{boss_status}"
                 f"Attack: {self.enemy.attack}  Defense: {self.enemy.defense}\n"
                 f"Max HP: {self.enemy.max_health}\n"
                 f"Role: {role_label}\n"
@@ -3152,7 +3208,10 @@ class BattleApp:
         )
         self.player_equipment_var.set(self.equipment_summary_text())
         self.enemy_stats_var.set(f"Attack {self.enemy.attack}  Defense {self.enemy.defense}")
-        self.enemy_banner_var.set(f"{self.enemy.enemy_type}  —  Level {self.enemy.level}")
+        banner = f"{enemy_display_name(self.enemy)}  —  Level {self.enemy.level}"
+        if self.enemy.is_boss:
+            banner += "  —  BOSS"
+        self.enemy_banner_var.set(banner)
         style_label = self._enemy_ai_style_label(self.enemy.ai_style)
         role_label = format_combat_role(self.enemy.combat_role)
         self.enemy_type_var.set(f"Type: {style_label} · {role_label}")
@@ -3192,8 +3251,18 @@ class BattleApp:
         combat_role = theme.get("combat_role", "melee")
         if combat_role not in COMBAT_ROLES:
             combat_role = "melee"
+        is_boss = is_boss_level(level)
+        boss_name = ""
+        if is_boss:
+            attack += BOSS_ATTACK_BONUS
+            defense += BOSS_DEFENSE_BONUS
+            health += random.randint(BOSS_HP_BONUS_MIN, BOSS_HP_BONUS_MAX)
+            boss_name = generate_boss_name(theme)
+            name = f"{boss_name} (Lv {level})"
+        else:
+            name = f"{theme['name']} (Lv {level})"
         return Combatant(
-            f"{theme['name']} (Lv {level})",
+            name,
             attack,
             defense,
             health,
@@ -3202,6 +3271,8 @@ class BattleApp:
             ai_style=theme["ai_style"],
             enemy_type=theme["name"],
             combat_role=combat_role,
+            is_boss=is_boss,
+            boss_name=boss_name,
         )
 
     def show_level_up_dialog(self):
@@ -3312,7 +3383,7 @@ class BattleApp:
         enemy_action = self.enemy_choice(player_action)
         action_names = {"swing": "swing", "block": "block", "power": "power strike"}
         self.log(f"\nYou choose to {action_names[player_action]}.")
-        self.log(f"{self.enemy.enemy_type} chooses to {enemy_action}.")
+        self.log(f"{enemy_display_name(self.enemy)} chooses to {enemy_action}.")
 
         if player_action == "power":
             self.resolve_power_strike(enemy_action)
@@ -3425,6 +3496,10 @@ class BattleApp:
             diff_coin_bonus = int(self.get_difficulty_mods()["coin_bonus"])
             xp_gain = max(1, int(self.enemy.level * xp_mult))
             coin_gain = 5 + coin_bonus + diff_coin_bonus
+            defeated_boss = self.enemy.is_boss
+            if defeated_boss:
+                xp_gain += BOSS_XP_BONUS
+                coin_gain += BOSS_COIN_BONUS
             self.player_xp += xp_gain
             self.coins += coin_gain
             self.run_summary["enemies_defeated"] += 1
@@ -3435,9 +3510,11 @@ class BattleApp:
             self.run_summary["total_coins_earned"] += coin_gain
             remaining_hp = self.player.health
             self.log(
-                f"\nVictory over {self.enemy.enemy_type}! You gain {xp_gain} XP and {coin_gain} coins. "
+                f"\nVictory over {enemy_display_name(self.enemy)}! You gain {xp_gain} XP and {coin_gain} coins. "
                 f"You remain at {remaining_hp}/{self.player.max_health} HP."
             )
+            if defeated_boss:
+                self.log(f"Boss bonus: +{BOSS_XP_BONUS} XP and +{BOSS_COIN_BONUS} coins.")
             self.check_level_up()
             self.apply_rest_heal()
             self.refresh_recruitment_pool()
@@ -3445,13 +3522,13 @@ class BattleApp:
             self.enemy = self.make_enemy(self.enemy_level)
             self.awaiting_reward = True
             self.enter_preparation_phase()
-            self.log(f"A stronger challenger awaits: {self.enemy.enemy_type}.")
+            self.log(f"A stronger challenger awaits: {enemy_display_name(self.enemy)}.")
             self.pending_reward_options = self.build_reward_options()
             self.show_victory_reward_dialog(self.pending_reward_options)
         else:
             self.run_summary["final_player_level"] = self.player_level
             self.run_summary["final_race"] = self.selected_race
-            self.run_summary["cause_of_defeat"] = self.enemy.enemy_type
+            self.run_summary["cause_of_defeat"] = enemy_display_name(self.enemy)
             self.cancel_scheduled_fight()
             self.in_combat = False
             self.in_preparation = False
