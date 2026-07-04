@@ -2087,18 +2087,28 @@ class BattleApp:
             return "Corrupt save"
         if not isinstance(data, dict):
             return "Corrupt save"
-        build = data.get("build", {})
-        run = data.get("run", {})
-        race = build.get("race", "Human")
-        level = run.get("player_level", "?")
-        defeated = run.get("run_summary", {}).get("enemies_defeated", 0)
-        if run.get("in_combat"):
-            phase = "mid-fight"
-        elif run.get("awaiting_reward"):
-            phase = "reward pending"
-        else:
-            phase = "preparation"
-        return f"L{level} {race}, {defeated} foes, {phase}"
+        build = data.get("build")
+        if not isinstance(build, dict):
+            return "Corrupt save"
+        run = data.get("run")
+        if not isinstance(run, dict):
+            return "Corrupt save"
+        try:
+            race = build.get("race", "Human")
+            level = run.get("player_level", "?")
+            run_summary = run.get("run_summary")
+            if not isinstance(run_summary, dict):
+                run_summary = {}
+            defeated = run_summary.get("enemies_defeated", 0)
+            if run.get("in_combat"):
+                phase = "mid-fight"
+            elif run.get("awaiting_reward"):
+                phase = "reward pending"
+            else:
+                phase = "preparation"
+            return f"L{level} {race}, {defeated} foes, {phase}"
+        except (AttributeError, TypeError, ValueError):
+            return "Corrupt save"
 
     def _prompt_slot_picker(self, title, kind, mode):
         """kind: 'build' or 'run'; mode: 'save' or 'load'. Returns slot 1-3 or None."""
