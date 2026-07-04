@@ -1,0 +1,7 @@
+---
+pid: 0
+cwd: "c:\Users\Justin Mallory\OneDrive\Desktop\Paper Fight"
+command: "cd \"c:\\Users\\Justin Mallory\\OneDrive\\Desktop\\Paper Fight\" && .venv\\Scripts\\pythonw.exe battle_gui.py"
+started_at: 2026-07-03T19:26:03.975Z
+running_for_ms: 0        
+---

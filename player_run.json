@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "build": {
+    "race": "Human",
+    "attack": 3,
+    "defense": 4,
+    "health": 8
+  },
+  "run": {
+    "player_level": 2,
+    "player_xp": 5,
+    "coins": 7,
+    "enemy_level": 6,
+    "stat_bonuses": {
+      "attack": 3,
+      "defense": 2,
+      "health": 12
+    },
+    "power_strike_cooldown": 0,
+    "next_enemy_wounded": true,
+    "player_health": 69,
+    "equipment": {
+      "head": {
+        "id": "steel_helm",
+        "name": "Steel Helm",
+        "slot": "head",
+        "defense": 2,
+        "price": 14
+      },
+      "chest": {
+        "id": "chainmail",
+        "name": "Chainmail",
+        "slot": "chest",
+        "defense": 3,
+        "price": 22
+      },
+      "legs": null,
+      "arms": null,
+      "weapon": {
+        "id": "rusty_dagger",
+        "name": "Rusty Dagger",
+        "slot": "weapon",
+        "attack": 1
+      },
+      "shield": {
+        "id": "wooden_shield",
+        "name": "Wooden Shield",
+        "slot": "shield",
+        "defense": 1
+      },
+      "ring1": null,
+      "ring2": null,
+      "amulet": null
+    },
+    "inventory": [
+      {
+        "id": "worn_tunic",
+        "name": "Worn Tunic",
+        "slot": "chest",
+        "defense": 1
+      },
+      {
+        "id": "steel_helm",
+        "name": "Steel Helm",
+        "slot": "head",
+        "defense": 2,
+        "price": 14
+      }
+    ],
+    "active_mercenaries": [],
+    "fallen_mercenaries": [],
+    "recruitment_pool": [
+      "thornback",
+      "shade",
+      "ironjaw"
+    ],
+    "enemy": {
+      "name": "Giant Spider (Lv 6)",
+      "attack": 13,
+      "defense": 4,
+      "health": 52,
+      "max_health": 52,
+      "level": 6,
+      "flavor": "A giant spider descends on glistening thread, legs clicking on stone.",
+      "ai_style": "tricky",
+      "enemy_type": "Giant Spider"
+    },
+    "awaiting_reward": false
+  }
+}

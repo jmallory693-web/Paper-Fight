@@ -1,0 +1,3 @@
+=== MERCENARY PLAYTEST ===
+Hired: Mira Leaf, Thornback
+  Battle 1: defeat in 53 turns | player HP 0 | foe Lv 6 | coins 41 | party: ['Thornback:16/28', 'Mira Leaf:0/24 (fallen)']

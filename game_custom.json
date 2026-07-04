@@ -1,0 +1,11 @@
+{
+  "shop_items": [],
+  "mercenaries": [],
+  "enemies": [],
+  "removed_shop_items": [],
+  "removed_enemies": [],
+  "battle_bonuses": {
+    "xp_multiplier": 1.0,
+    "coin_bonus": 0
+  }
+}
