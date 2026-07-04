@@ -169,6 +169,109 @@ SHOP_EQUIPMENT = [
     {"id": "jade_amulet", "name": "Jade Amulet", "slot": "amulet", "health": 8, "price": 16},
 ]
 
+CONSUMABLE_EFFECT_TYPES = (
+    "heal",
+    "damage",
+    "defense_boost",
+    "attack_boost",
+    "cooldown_reduce",
+    "next_hit_reduction",
+)
+CONSUMABLE_TIMINGS = ("combat", "preparation", "both")
+
+SHOP_CONSUMABLES = [
+    {
+        "id": "minor_health_potion",
+        "name": "Minor Health Potion",
+        "cost": 8,
+        "effect_type": "heal",
+        "power": 10,
+        "description": "Restores 10 HP.",
+        "timing": "both",
+    },
+    {
+        "id": "greater_health_potion",
+        "name": "Greater Health Potion",
+        "cost": 18,
+        "effect_type": "heal",
+        "power": 25,
+        "description": "Restores 25 HP.",
+        "timing": "both",
+    },
+    {
+        "id": "field_salve",
+        "name": "Field Salve",
+        "cost": 5,
+        "effect_type": "heal",
+        "power": 6,
+        "description": "Restores 6 HP.",
+        "timing": "both",
+    },
+    {
+        "id": "fire_bomb",
+        "name": "Fire Bomb",
+        "cost": 14,
+        "effect_type": "damage",
+        "power": 10,
+        "description": "Deals 10 damage to the enemy.",
+        "timing": "combat",
+    },
+    {
+        "id": "acid_flask",
+        "name": "Acid Flask",
+        "cost": 10,
+        "effect_type": "damage",
+        "power": 7,
+        "description": "Deals 7 damage to the enemy.",
+        "timing": "combat",
+    },
+    {
+        "id": "throwing_knife",
+        "name": "Throwing Knife",
+        "cost": 6,
+        "effect_type": "damage",
+        "power": 5,
+        "description": "Deals 5 damage to the enemy.",
+        "timing": "combat",
+    },
+    {
+        "id": "ironbark_salve",
+        "name": "Ironbark Salve",
+        "cost": 12,
+        "effect_type": "defense_boost",
+        "power": 2,
+        "description": "+2 Defense for the current fight.",
+        "timing": "combat",
+    },
+    {
+        "id": "battle_tonic",
+        "name": "Battle Tonic",
+        "cost": 12,
+        "effect_type": "attack_boost",
+        "power": 2,
+        "description": "+2 Attack for the current fight.",
+        "timing": "combat",
+    },
+    {
+        "id": "focus_draught",
+        "name": "Focus Draught",
+        "cost": 9,
+        "effect_type": "cooldown_reduce",
+        "power": 1,
+        "description": "Reduces Power Strike cooldown by 1.",
+        "timing": "combat",
+    },
+    {
+        "id": "smoke_bomb",
+        "name": "Smoke Bomb",
+        "cost": 11,
+        "effect_type": "next_hit_reduction",
+        "power": 3,
+        "description": "Softens the next enemy hit by 3.",
+        "timing": "combat",
+    },
+]
+
 # Themed foes: stat mods stack on top of base level scaling.
 ENEMY_THEMES = [
     {
@@ -443,6 +546,14 @@ def get_mercenary_template(template_id, templates=None):
     return None
 
 
+def get_consumable_template(consumable_id, templates=None):
+    pool = templates if templates is not None else SHOP_CONSUMABLES
+    for template in pool:
+        if template.get("id") == consumable_id:
+            return template
+    return None
+
+
 def merge_custom_lists(base_list, custom_list, key="id"):
     """Merge admin/custom entries into runtime lists without duplicates."""
     merged = [dict(item) for item in base_list]
@@ -529,6 +640,7 @@ class BattleApp:
 
         # Runtime content lists (base data + admin/custom additions) — before make_enemy.
         self.shop_equipment = [dict(item) for item in SHOP_EQUIPMENT]
+        self.shop_consumables = [dict(item) for item in SHOP_CONSUMABLES]
         self.mercenary_templates = [dict(item) for item in MERCENARY_TEMPLATES]
         self.enemy_themes = [dict(item) for item in ENEMY_THEMES]
         self.battle_bonuses = {"xp_multiplier": 1.0, "coin_bonus": 0}
@@ -551,6 +663,10 @@ class BattleApp:
         self.awaiting_reward = False
         self.fight_timer_id = None
         self._player_damage_reduction_next = False
+        self._player_damage_reduction_amount = 0
+        self._fight_attack_bonus = 0
+        self._fight_defense_bonus = 0
+        self.consumable_inventory = {}
 
         # Build, race, equipment, and bonus tracking.
         self.selected_race = "Human"
@@ -936,6 +1052,8 @@ class BattleApp:
         self.character_btn.pack(side=tk.RIGHT, padx=4)
         self.recruit_btn = ttk.Button(footer, text="Recruit", command=self.open_recruit, state=tk.DISABLED)
         self.recruit_btn.pack(side=tk.RIGHT, padx=4)
+        self.use_item_btn = ttk.Button(footer, text="Use Item", command=self.open_use_consumables_dialog, state=tk.DISABLED)
+        self.use_item_btn.pack(side=tk.RIGHT, padx=4)
         self.shop_btn = ttk.Button(footer, text="Shop", command=self.open_shop, state=tk.DISABLED)
         self.shop_btn.pack(side=tk.RIGHT, padx=4)
         self.play_again_btn = ttk.Button(
@@ -962,12 +1080,9 @@ class BattleApp:
             wraplength=520,
         ).pack(pady=(4, 10))
 
-        consumables = ttk.LabelFrame(self.shop_frame, text="Consumables", padding=8)
-        consumables.pack(fill=tk.X, pady=6)
-        ttk.Label(consumables, text="Health Salve — 10 coins — restores 12 HP").pack(anchor="w")
-        ttk.Button(consumables, text="Buy Health Salve", command=self.buy_health_salve).pack(anchor="w", pady=4)
-        ttk.Label(consumables, text="Iron Tonic — 15 coins — +1 Defense for this run").pack(anchor="w", pady=(6, 0))
-        ttk.Button(consumables, text="Buy Iron Tonic", command=self.buy_iron_tonic).pack(anchor="w", pady=4)
+        consumables_section = ttk.LabelFrame(self.shop_frame, text="Consumables", padding=8)
+        consumables_section.pack(fill=tk.X, pady=6)
+        self.shop_consumables_frame = self._build_scrollable_list_frame(consumables_section)
 
         gear_section = ttk.LabelFrame(self.shop_frame, text="Equipment", padding=8)
         gear_section.pack(fill=tk.BOTH, expand=True, pady=6)
@@ -1461,6 +1576,30 @@ class BattleApp:
                     command=lambda gear=item: self.buy_equipment(gear),
                 ).pack(side=tk.RIGHT, padx=(8, 0))
 
+    def refresh_shop_consumables_list(self):
+        if not hasattr(self, "shop_consumables_frame"):
+            return
+        for child in self.shop_consumables_frame.winfo_children():
+            child.destroy()
+
+        for item in self.shop_consumables:
+            row = ttk.Frame(self.shop_consumables_frame)
+            row.pack(fill=tk.X, pady=4)
+            info = ttk.Frame(row)
+            info.pack(side=tk.LEFT, anchor="w", fill=tk.X, expand=True)
+            owned = self.consumable_quantity(item["id"])
+            owned_text = f"  (owned: {owned})" if owned else ""
+            ttk.Label(
+                info,
+                text=f"{item['name']} — {item['cost']} coins — {item.get('description', '')}{owned_text}",
+                wraplength=360,
+            ).pack(anchor="w")
+            ttk.Button(
+                row,
+                text=f"Buy ({item['cost']})",
+                command=lambda consumable=item: self.buy_consumable(consumable),
+            ).pack(side=tk.RIGHT, padx=(8, 0))
+
     def log(self, text):
         self.log_box.configure(state=tk.NORMAL)
         self.log_box.insert(tk.END, text + "\n")
@@ -1526,6 +1665,7 @@ class BattleApp:
         self.player.max_health = max_health
         self.player.health = min(self.player.health, self.player.max_health)
         self.player.combat_role = self.selected_combat_role
+        self.apply_fight_consumable_bonuses()
 
     def init_starting_equipment(self):
         """Equip the default starting loadout or gear from a saved build."""
@@ -1553,6 +1693,209 @@ class BattleApp:
                 self.inventory.pop(idx)
                 return True
         return False
+
+    def add_consumable(self, consumable_id, quantity=1):
+        qty = max(0, int(quantity))
+        if qty <= 0:
+            return
+        self.consumable_inventory[consumable_id] = self.consumable_quantity(consumable_id) + qty
+
+    def remove_consumable(self, consumable_id, quantity=1):
+        qty = max(0, int(quantity))
+        current = self.consumable_quantity(consumable_id)
+        if current < qty:
+            return False
+        remaining = current - qty
+        if remaining <= 0:
+            self.consumable_inventory.pop(consumable_id, None)
+        else:
+            self.consumable_inventory[consumable_id] = remaining
+        return True
+
+    def consumable_quantity(self, consumable_id):
+        return int(self.consumable_inventory.get(consumable_id, 0))
+
+    def owned_consumables(self):
+        owned = []
+        for consumable_id, quantity in self.consumable_inventory.items():
+            qty = int(quantity)
+            if qty <= 0:
+                continue
+            template = get_consumable_template(consumable_id, self.shop_consumables)
+            if template:
+                owned.append({"template": template, "quantity": qty})
+        owned.sort(key=lambda entry: entry["template"]["name"])
+        return owned
+
+    def can_use_consumables_now(self):
+        if not self.run_started or not self.player.alive():
+            return False
+        if self.awaiting_reward:
+            return False
+        if self.game_over_window is not None and self.game_over_window.winfo_exists():
+            return False
+        return self.in_combat or self.in_preparation
+
+    def can_use_consumable(self, template):
+        if not self.can_use_consumables_now():
+            return False
+        if self.consumable_quantity(template["id"]) <= 0:
+            return False
+        timing = template.get("timing", "both")
+        if timing == "both":
+            return self.in_combat or (self.in_preparation and not self.in_combat)
+        if timing == "combat":
+            return self.in_combat
+        if timing == "preparation":
+            return self.in_preparation and not self.in_combat
+        return False
+
+    def apply_fight_consumable_bonuses(self):
+        attack, defense, _max_health = self.compute_player_stats()
+        self.player.attack = attack + self._fight_attack_bonus
+        self.player.defense = defense + self._fight_defense_bonus
+
+    def clear_fight_consumable_buffs(self):
+        self._fight_attack_bonus = 0
+        self._fight_defense_bonus = 0
+        self._player_damage_reduction_next = False
+        self._player_damage_reduction_amount = 0
+        self.apply_player_stats()
+
+    def apply_consumable_effect(self, template):
+        effect_type = template["effect_type"]
+        power = int(template.get("power", 0))
+        name = template["name"]
+
+        if effect_type == "heal":
+            heal_amount = min(power, self.player.max_health - self.player.health)
+            self.player.health += heal_amount
+            self.log(f"You use {name} and recover {heal_amount} HP.")
+            return False
+
+        if effect_type == "damage":
+            self.enemy.health = max(0, self.enemy.health - power)
+            self.log(
+                f"You hurl a {name} at {enemy_display_name(self.enemy)} for {power} damage!"
+            )
+            return self.enemy.health <= 0
+
+        if effect_type == "defense_boost":
+            self._fight_defense_bonus += power
+            self.apply_fight_consumable_bonuses()
+            self.log(f"You apply {name} and gain +{power} Defense for this fight.")
+            return False
+
+        if effect_type == "attack_boost":
+            self._fight_attack_bonus += power
+            self.apply_fight_consumable_bonuses()
+            self.log(f"You drink {name} and gain +{power} Attack for this fight.")
+            return False
+
+        if effect_type == "cooldown_reduce":
+            if self.power_strike_cooldown <= 0:
+                self.log(f"You drink {name}, but Power Strike is already ready.")
+            else:
+                self.power_strike_cooldown = max(0, self.power_strike_cooldown - power)
+                self.log(f"You drink {name} and Power Strike cooldown drops by {power}.")
+            return False
+
+        if effect_type == "next_hit_reduction":
+            self._player_damage_reduction_next = True
+            self._player_damage_reduction_amount = power
+            self.log(f"You toss a {name} — the next enemy blow will be softened by {power}.")
+            return False
+
+        return False
+
+    def use_consumable(self, consumable_id):
+        template = get_consumable_template(consumable_id, self.shop_consumables)
+        if not template:
+            return False
+        if not self.can_use_consumable(template):
+            messagebox.showinfo("Use Item", "You cannot use that item right now.")
+            return False
+        if template["effect_type"] == "heal" and self.player.health >= self.player.max_health:
+            messagebox.showinfo("Use Item", "You are already at full health.")
+            return False
+        if not self.remove_consumable(consumable_id, 1):
+            messagebox.showinfo("Use Item", "You do not have that item.")
+            return False
+
+        enemy_killed = self.apply_consumable_effect(template)
+        self.refresh_stats()
+        self.update_use_item_button()
+        if enemy_killed:
+            self.finish_match(victory=True)
+        return True
+
+    def _apply_player_damage_reduction(self, enemy_hits):
+        if not self._player_damage_reduction_next:
+            return enemy_hits, False
+        amount = self._player_damage_reduction_amount or 3
+        reduced = max(1, enemy_hits - amount)
+        self._player_damage_reduction_next = False
+        self._player_damage_reduction_amount = 0
+        return reduced, True
+
+    def update_use_item_button(self):
+        if not hasattr(self, "use_item_btn"):
+            return
+        if not self.can_use_consumables_now():
+            self.use_item_btn.configure(state=tk.DISABLED)
+            return
+        has_usable = any(
+            self.can_use_consumable(entry["template"]) for entry in self.owned_consumables()
+        )
+        self.use_item_btn.configure(state=tk.NORMAL if has_usable else tk.DISABLED)
+
+    def open_use_consumables_dialog(self):
+        if not self.can_use_consumables_now():
+            messagebox.showinfo("Use Item", "You cannot use items right now.")
+            return
+        owned = self.owned_consumables()
+        if not owned:
+            messagebox.showinfo("Use Item", "You have no consumables.")
+            return
+
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Use Item")
+        dialog.geometry("460x360")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        ttk.Label(dialog, text="Consumables", font=("Segoe UI", 12, "bold")).pack(pady=(10, 6))
+
+        list_frame = ttk.Frame(dialog, padding=8)
+        list_frame.pack(fill=tk.BOTH, expand=True, padx=10)
+
+        for entry in owned:
+            template = entry["template"]
+            qty = entry["quantity"]
+            usable = self.can_use_consumable(template)
+            row = ttk.Frame(list_frame)
+            row.pack(fill=tk.X, pady=4)
+            info = ttk.Frame(row)
+            info.pack(side=tk.LEFT, anchor="w", fill=tk.X, expand=True)
+            ttk.Label(
+                info,
+                text=f"{template['name']} x{qty}",
+                font=("Segoe UI", 10, "bold"),
+            ).pack(anchor="w")
+            ttk.Label(info, text=template.get("description", ""), wraplength=300).pack(anchor="w")
+            if not usable:
+                ttk.Label(info, text="(Not usable right now)", wraplength=300).pack(anchor="w")
+            ttk.Button(
+                row,
+                text="Use",
+                command=lambda cid=template["id"], dlg=dialog: self._use_consumable_from_dialog(cid, dlg),
+                state=tk.NORMAL if usable else tk.DISABLED,
+            ).pack(side=tk.RIGHT, padx=(8, 0))
+
+        ttk.Button(dialog, text="Close", command=dialog.destroy).pack(pady=(0, 10))
+
+    def _use_consumable_from_dialog(self, consumable_id, dialog):
+        dialog.destroy()
+        self.use_consumable(consumable_id)
 
     def format_item_detail(self, item):
         bits = []
@@ -2357,6 +2700,10 @@ class BattleApp:
                 "player_health": self.player.health,
                 "equipment": {slot: (dict(item) if item else None) for slot, item in self.equipment.items()},
                 "inventory": [dict(item) for item in self.inventory],
+                "consumable_inventory": dict(self.consumable_inventory),
+                "_fight_attack_bonus": self._fight_attack_bonus,
+                "_fight_defense_bonus": self._fight_defense_bonus,
+                "_player_damage_reduction_amount": self._player_damage_reduction_amount,
                 "active_mercenaries": [self.mercenary_to_dict(m) for m in self.active_mercenaries],
                 "fallen_mercenaries": [self.mercenary_to_dict(m) for m in self.fallen_mercenaries],
                 "recruitment_pool": [t["id"] for t in self.recruitment_pool],
@@ -2420,6 +2767,16 @@ class BattleApp:
             if slot in self.equipment and item:
                 self.equipment[slot] = dict(item)
         self.inventory = [dict(item) for item in run.get("inventory", [])]
+        self.consumable_inventory = {}
+        raw_consumables = run.get("consumable_inventory", {})
+        if isinstance(raw_consumables, dict):
+            for key, value in raw_consumables.items():
+                qty = int(value)
+                if qty > 0:
+                    self.consumable_inventory[str(key)] = qty
+        self._fight_attack_bonus = int(run.get("_fight_attack_bonus", 0))
+        self._fight_defense_bonus = int(run.get("_fight_defense_bonus", 0))
+        self._player_damage_reduction_amount = int(run.get("_player_damage_reduction_amount", 0))
         self.player = Combatant(f"{self.selected_race} Warrior", BASE_ATTACK, BASE_DEFENSE, BASE_HEALTH)
         self.apply_player_stats()
         self.player.health = max(1, min(int(run.get("player_health", self.player.max_health)), self.player.max_health))
@@ -2727,6 +3084,10 @@ class BattleApp:
         self.init_run_summary()
         self.stat_bonuses = {"attack": 0, "defense": 0, "health": 0}
         self.inventory = []
+        self.consumable_inventory = {}
+        self._fight_attack_bonus = 0
+        self._fight_defense_bonus = 0
+        self._player_damage_reduction_amount = 0
         self.init_starting_equipment()
         self.player = Combatant(f"{self.selected_race} Warrior", BASE_ATTACK, BASE_DEFENSE, BASE_HEALTH)
         self.apply_player_stats()
@@ -2743,6 +3104,9 @@ class BattleApp:
         self.next_enemy_wounded = False
         self.awaiting_reward = False
         self._player_damage_reduction_next = False
+        self._player_damage_reduction_amount = 0
+        self._fight_attack_bonus = 0
+        self._fight_defense_bonus = 0
         self.cancel_scheduled_fight()
         self.clear_mercenary_state()
         self.refresh_recruitment_pool()
@@ -2899,6 +3263,7 @@ class BattleApp:
         self.swing_btn.configure(state=state)
         self.block_btn.configure(state=state)
         self.update_power_strike_button()
+        self.update_use_item_button()
 
     def update_power_strike_button(self):
         can_act = self.in_combat or self.awaiting_first_strike
@@ -2976,41 +3341,26 @@ class BattleApp:
             return
         self.shop_coins_var.set(f"Coins: {self.coins}")
         self.refresh_shop_gear_list()
+        self.refresh_shop_consumables_list()
         self.hide_all_screens()
         self.shop_frame.pack(fill=tk.BOTH, expand=True)
 
-    def buy_health_salve(self):
+    def buy_consumable(self, item):
         if self.in_combat:
             return
-        if self.coins < 10:
-            messagebox.showinfo("Shop", "You do not have enough coins for that.")
-            return
-        if self.player.health >= self.player.max_health:
-            messagebox.showinfo("Shop", "You are already at full health.")
-            return
-
-        self.coins -= 10
-        heal_amount = min(12, self.player.max_health - self.player.health)
-        self.player.health += heal_amount
-        self.refresh_stats()
-        if self._embedded_screen_visible(self.shop_frame):
-            self.shop_coins_var.set(f"Coins: {self.coins}")
-        self.log(f"You buy a Health Salve and recover {heal_amount} HP.")
-
-    def buy_iron_tonic(self):
-        if self.in_combat:
-            return
-        if self.coins < 15:
+        cost = int(item.get("cost", 0))
+        if self.coins < cost:
             messagebox.showinfo("Shop", "You do not have enough coins for that.")
             return
 
-        self.coins -= 15
-        self.stat_bonuses["defense"] += 1
-        self.apply_player_stats(heal_missing_max=True)
-        self.refresh_stats()
+        self.coins -= cost
+        self.add_consumable(item["id"], 1)
+        qty = self.consumable_quantity(item["id"])
+        self.log(f"You buy {item['name']} — consumables stock: x{qty}.")
         if self._embedded_screen_visible(self.shop_frame):
             self.shop_coins_var.set(f"Coins: {self.coins}")
-        self.log("You drink an Iron Tonic and gain +1 Defense for this run.")
+            self.refresh_shop_consumables_list()
+        self.update_use_item_button()
 
     def buy_equipment(self, item):
         if self.in_combat:
@@ -3200,6 +3550,7 @@ class BattleApp:
             self.enemy_preview_panel.grid_remove()
 
     def refresh_stats(self):
+        self.apply_fight_consumable_bonuses()
         self.player_health_var.set(f"HP: {self.player.health} / {self.player.max_health}")
         self.enemy_health_var.set(f"HP: {self.enemy.health} / {self.enemy.max_health}")
         player_role = format_combat_role(self.player.combat_role or self.selected_combat_role)
@@ -3227,6 +3578,7 @@ class BattleApp:
         self.refresh_enemy_preview()
         self.refresh_character_panel()
         self.refresh_mercenary_panel()
+        self.update_use_item_button()
         self.root.update_idletasks()
 
     def pick_enemy_theme(self, level):
@@ -3391,10 +3743,9 @@ class BattleApp:
         elif player_action == "swing" and enemy_action == "swing":
             player_hits = self.compute_damage(self.player, self.enemy)
             enemy_hits = self.compute_damage(self.enemy, self.player)
-            if self._player_damage_reduction_next:
-                enemy_hits = max(1, enemy_hits - 3)
-                self._player_damage_reduction_next = False
-                self.log("Shield Wall softens the enemy riposte!")
+            enemy_hits, reduced = self._apply_player_damage_reduction(enemy_hits)
+            if reduced:
+                self.log("Smoke or cover softens the enemy riposte!")
             self.enemy.health -= player_hits
             self.player.health -= enemy_hits
             self.log(f"Your blade lands for {player_hits} damage.")
@@ -3406,10 +3757,9 @@ class BattleApp:
             self.log("The enemy braces and softens the blow.")
         elif player_action == "block" and enemy_action == "swing":
             enemy_hits = self.compute_damage(self.enemy, self.player, blocked=True)
-            if self._player_damage_reduction_next:
-                enemy_hits = max(1, enemy_hits - 2)
-                self._player_damage_reduction_next = False
-                self.log("Shield Wall further reduces the blow!")
+            enemy_hits, reduced = self._apply_player_damage_reduction(enemy_hits)
+            if reduced:
+                self.log("Smoke or cover further reduces the blow!")
             self.player.health -= enemy_hits
             self.log(f"The enemy lunges for {enemy_hits} damage.")
             self.log("You raise your guard and take less punishment.")
@@ -3441,10 +3791,9 @@ class BattleApp:
 
         if enemy_action == "swing":
             enemy_hits = self.compute_damage(self.enemy, self.player)
-            if self._player_damage_reduction_next:
-                enemy_hits = max(1, enemy_hits - 3)
-                self._player_damage_reduction_next = False
-                self.log("Shield Wall absorbs part of the counterattack!")
+            enemy_hits, reduced = self._apply_player_damage_reduction(enemy_hits)
+            if reduced:
+                self.log("Smoke or cover absorbs part of the counterattack!")
             self.player.health -= enemy_hits
             self.log(f"You are wide open — the enemy punishes you for {enemy_hits} damage!")
         elif enemy_action == "block":
@@ -3490,6 +3839,7 @@ class BattleApp:
         self.apply_mercenary_rest_heal()
 
     def finish_match(self, victory):
+        self.clear_fight_consumable_buffs()
         if victory:
             xp_mult = float(self.battle_bonuses.get("xp_multiplier", 1.0))
             coin_bonus = int(self.battle_bonuses.get("coin_bonus", 0))
@@ -3545,6 +3895,7 @@ class BattleApp:
             if self.active_mercenaries or self.fallen_mercenaries:
                 self.log("Your mercenaries scatter — hire anew on the next run.")
             self.show_game_over_screen()
+            self.update_use_item_button()
 
 
     # --- Custom content, admin tools, stat reset, and loot drops ---
