@@ -705,6 +705,7 @@ class BattleApp:
         self._fight_attack_bonus = 0
         self._fight_defense_bonus = 0
         self.consumable_inventory = {}
+        self.field_search_used_for_enemy_level = -1
 
         # Build, race, equipment, and bonus tracking.
         self.selected_race = "Human"
@@ -1094,6 +1095,8 @@ class BattleApp:
         self._build_embedded_shop_screen()
         self._build_embedded_recruit_screen()
         self._build_embedded_town_screen()
+        self._build_embedded_dungeons_screen()
+        self._build_embedded_fields_screen()
         self._build_embedded_admin_screen()
 
     def _build_embedded_shop_screen(self):
@@ -1175,6 +1178,8 @@ class BattleApp:
         destinations = ttk.LabelFrame(self.town_frame, text="Destinations", padding=12)
         destinations.pack(fill=tk.X, pady=6)
         ttk.Button(destinations, text="Arena", command=self.open_arena, width=22).pack(anchor="w", pady=4)
+        ttk.Button(destinations, text="Dungeons", command=self.open_dungeons, width=22).pack(anchor="w", pady=4)
+        ttk.Button(destinations, text="Fields", command=self.open_fields, width=22).pack(anchor="w", pady=4)
 
         services = ttk.LabelFrame(self.town_frame, text="Services", padding=12)
         services.pack(fill=tk.X, pady=6)
@@ -1201,6 +1206,49 @@ class BattleApp:
             town_actions, text="Main Menu", command=self.return_to_main_menu, width=18
         )
         self.town_main_menu_btn.pack(side=tk.RIGHT)
+
+    def _build_embedded_dungeons_screen(self):
+        """Dungeon destination — combat coming in a later pass."""
+        self.dungeons_frame = ttk.Frame(self.root, padding=16)
+        self.dungeons_frame.pack_forget()
+        ttk.Label(self.dungeons_frame, text="Dungeons", font=("Segoe UI", 18, "bold")).pack(pady=(8, 4))
+        ttk.Label(
+            self.dungeons_frame,
+            text="Deeper threats await below the town. Harder foes and richer rewards are coming soon.",
+            wraplength=520,
+        ).pack(pady=(4, 10))
+        ttk.Button(
+            self.dungeons_frame,
+            text="Challenge Dungeon Foe (Coming next)",
+            state=tk.DISABLED,
+            width=32,
+        ).pack(anchor="w", pady=6)
+        dungeon_actions = ttk.Frame(self.dungeons_frame)
+        dungeon_actions.pack(fill=tk.X, pady=(12, 0))
+        ttk.Button(dungeon_actions, text="Back to Town", command=self.close_dungeons, width=18).pack(side=tk.LEFT)
+
+    def _build_embedded_fields_screen(self):
+        """Fields destination — search for supplies between arena fights."""
+        self.fields_frame = ttk.Frame(self.root, padding=16)
+        self.fields_frame.pack_forget()
+        ttk.Label(self.fields_frame, text="Fields", font=("Segoe UI", 18, "bold")).pack(pady=(8, 4))
+        ttk.Label(
+            self.fields_frame,
+            text="Search the outskirts for coins, supplies, or a moment's rest before your next duel.",
+            wraplength=520,
+        ).pack(pady=(4, 10))
+        self.fields_status_var = tk.StringVar(value="")
+        ttk.Label(self.fields_frame, textvariable=self.fields_status_var, wraplength=520).pack(anchor="w", pady=4)
+        self.fields_search_btn = ttk.Button(
+            self.fields_frame,
+            text="Search Fields",
+            command=self.search_fields,
+            width=22,
+        )
+        self.fields_search_btn.pack(anchor="w", pady=6)
+        fields_actions = ttk.Frame(self.fields_frame)
+        fields_actions.pack(fill=tk.X, pady=(12, 0))
+        ttk.Button(fields_actions, text="Back to Town", command=self.close_fields, width=18).pack(side=tk.LEFT)
 
     def _build_embedded_admin_screen(self):
         """Admin tools as a full in-game screen (not a popup)."""
@@ -2574,6 +2622,8 @@ class BattleApp:
             "shop_frame",
             "recruit_frame",
             "town_frame",
+            "dungeons_frame",
+            "fields_frame",
             "admin_frame",
         ):
             frame = getattr(self, frame_name, None)
@@ -2632,6 +2682,87 @@ class BattleApp:
         if self.in_preparation and not self.awaiting_reward:
             self.status_var.set("Ready to engage")
             self.phase_info_var.set("Enter the Arena and strike when you are ready to fight.")
+
+    def show_dungeons_screen(self):
+        self.hide_all_screens()
+        self.dungeons_frame.pack(fill=tk.BOTH, expand=True)
+
+    def open_dungeons(self):
+        if not self.can_visit_town():
+            self.log("You cannot enter the Dungeons right now.")
+            return
+        self.show_dungeons_screen()
+
+    def close_dungeons(self):
+        if self.run_started:
+            self.show_town_screen()
+        else:
+            self.show_main_menu()
+
+    def show_fields_screen(self):
+        self.hide_all_screens()
+        self.fields_frame.pack(fill=tk.BOTH, expand=True)
+        self.refresh_fields_screen()
+
+    def open_fields(self):
+        if not self.can_visit_town():
+            self.log("You cannot enter the Fields right now.")
+            return
+        self.show_fields_screen()
+
+    def close_fields(self):
+        if self.run_started:
+            self.show_town_screen()
+        else:
+            self.show_main_menu()
+
+    def can_search_fields(self):
+        return self.can_visit_town() and self.field_search_used_for_enemy_level != self.enemy_level
+
+    def refresh_fields_screen(self):
+        if not hasattr(self, "fields_search_btn"):
+            return
+        if self.can_search_fields():
+            self.fields_status_var.set("You may search the fields once before each arena challenger level.")
+            self.fields_search_btn.configure(state=tk.NORMAL)
+        else:
+            if not self.can_visit_town():
+                self.fields_status_var.set("Fields are unavailable right now.")
+            else:
+                self.fields_status_var.set(
+                    f"You already searched the fields at enemy level {self.enemy_level}."
+                )
+            self.fields_search_btn.configure(state=tk.DISABLED)
+
+    def search_fields(self):
+        if not self.can_search_fields():
+            messagebox.showinfo("Fields", "You cannot search the fields right now.")
+            return
+        roll = random.random()
+        if roll < 0.30:
+            coin_find = random.randint(4, 8)
+            self.coins += coin_find
+            self.run_summary["total_coins_earned"] += coin_find
+            self.log(f"You search the fields and find {coin_find} coins.")
+        elif roll < 0.55:
+            consumable_id = random.choice(["field_salve", "minor_health_potion"])
+            template = get_consumable_template(consumable_id, self.shop_consumables)
+            name = template["name"] if template else consumable_id
+            self.add_consumable(consumable_id, 1)
+            self.log(f"You search the fields and find a {name}.")
+        elif roll < 0.75:
+            heal_amount = min(random.randint(3, 6), self.player.max_health - self.player.health)
+            if heal_amount > 0:
+                self.player.health += heal_amount
+                self.log(f"You search the fields and recover {heal_amount} HP.")
+            else:
+                self.log("You search the fields but are already at full health.")
+        else:
+            self.log("You search the fields but find nothing useful.")
+        self.field_search_used_for_enemy_level = self.enemy_level
+        self.refresh_stats()
+        self.refresh_fields_screen()
+        self.update_use_item_button()
 
     def update_town_button(self):
         if not hasattr(self, "town_btn"):
@@ -3047,6 +3178,7 @@ class BattleApp:
                 "pending_reward_options": reward_options_to_json(self.pending_reward_options),
                 "player_damage_reduction_next": self._player_damage_reduction_next,
                 "run_summary": dict(self.run_summary),
+                "field_search_used_for_enemy_level": self.field_search_used_for_enemy_level,
             },
         }
 
@@ -3116,6 +3248,7 @@ class BattleApp:
         self.player_xp = int(run.get("player_xp", 0))
         self.coins = int(run.get("coins", 10))
         self.enemy_level = int(run.get("enemy_level", 1))
+        self.field_search_used_for_enemy_level = int(run.get("field_search_used_for_enemy_level", -1))
         self.power_strike_cooldown = int(run.get("power_strike_cooldown", 0))
         self.next_enemy_wounded = bool(run.get("next_enemy_wounded", False))
         self.awaiting_reward = bool(run.get("awaiting_reward", False))
@@ -3416,6 +3549,7 @@ class BattleApp:
         self.stat_bonuses = {"attack": 0, "defense": 0, "health": 0}
         self.inventory = []
         self.consumable_inventory = {}
+        self.field_search_used_for_enemy_level = -1
         self._fight_attack_bonus = 0
         self._fight_defense_bonus = 0
         self._player_damage_reduction_amount = 0
