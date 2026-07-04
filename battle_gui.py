@@ -1131,7 +1131,7 @@ class BattleApp:
         ttk.Label(self.admin_frame, text="Admin Mode", font=("Segoe UI", 18, "bold")).pack(pady=(8, 4))
         ttk.Label(
             self.admin_frame,
-            text="Add custom items, mercenaries, enemies, and tune battle win bonuses.",
+            text="Add custom items, mercenaries, enemies, consumables, and tune battle win bonuses.",
             wraplength=520,
         ).pack(pady=(0, 8))
 
@@ -1140,10 +1140,12 @@ class BattleApp:
         item_tab = ttk.Frame(notebook, padding=8)
         merc_tab = ttk.Frame(notebook, padding=8)
         enemy_tab = ttk.Frame(notebook, padding=8)
+        consumable_tab = ttk.Frame(notebook, padding=8)
         bonus_tab = ttk.Frame(notebook, padding=8)
         notebook.add(item_tab, text="Items")
         notebook.add(merc_tab, text="Mercenaries")
         notebook.add(enemy_tab, text="Enemies")
+        notebook.add(consumable_tab, text="Consumables")
         notebook.add(bonus_tab, text="Bonuses")
 
         item_form = ttk.Frame(item_tab)
@@ -1220,6 +1222,30 @@ class BattleApp:
             enemy_tab, "Existing Monsters", remove_command=self.admin_remove_selected_enemy
         )
 
+        consumable_form = ttk.Frame(consumable_tab)
+        consumable_form.pack(fill=tk.X)
+        self.admin_consumable_fields = {}
+        consumable_defaults = [
+            ("ID", "id", "custom_consumable"),
+            ("Name", "name", "Custom Potion"),
+            ("Cost", "cost", "10"),
+            ("Effect Type", "effect_type", "heal"),
+            ("Power", "power", "10"),
+            ("Description", "description", "A custom consumable."),
+            ("Timing", "timing", "both"),
+        ]
+        for idx, (label, key, default) in enumerate(consumable_defaults):
+            ttk.Label(consumable_form, text=label).grid(row=idx, column=0, sticky="w", pady=2)
+            var = tk.StringVar(value=default)
+            self.admin_consumable_fields[key] = var
+            ttk.Entry(consumable_form, textvariable=var, width=28).grid(row=idx, column=1, sticky="w", pady=2)
+        ttk.Button(consumable_form, text="Add Consumable", command=self.admin_add_custom_consumable).grid(
+            row=len(consumable_defaults), column=0, columnspan=2, pady=8
+        )
+        self.admin_consumables_list = self._build_admin_list_box(
+            consumable_tab, "Existing Consumables", remove_command=self.admin_remove_selected_consumable
+        )
+
         bonus_form = ttk.Frame(bonus_tab)
         bonus_form.pack(fill=tk.X)
         ttk.Label(bonus_form, text="XP Multiplier").grid(row=0, column=0, sticky="w", pady=4)
@@ -1294,6 +1320,14 @@ class BattleApp:
             f"HP {enemy.get('health_mod', 0):+d} — {enemy.get('ai_style', 'balanced')}{custom}"
         )
 
+    def _format_admin_consumable_line(self, consumable):
+        custom = " (custom)" if consumable.get("id") not in {entry["id"] for entry in SHOP_CONSUMABLES} else ""
+        return (
+            f"{consumable['name']} [{consumable.get('id', '?')}] — {consumable.get('cost', 0)} coins — "
+            f"{consumable.get('effect_type', '?')} {consumable.get('power', 0)} — "
+            f"{consumable.get('timing', 'both')} — {consumable.get('description', '')}{custom}"
+        )
+
     def refresh_admin_lists(self):
         if not hasattr(self, "admin_items_list"):
             return
@@ -1311,6 +1345,11 @@ class BattleApp:
         self._refresh_admin_listbox(
             self.admin_enemies_list,
             [self._format_admin_enemy_line(enemy) for enemy in self._admin_enemies_entries],
+        )
+        self._admin_consumables_entries = list(self.shop_consumables)
+        self._refresh_admin_listbox(
+            self.admin_consumables_list,
+            [self._format_admin_consumable_line(consumable) for consumable in self._admin_consumables_entries],
         )
         self._admin_bonus_keys = ["xp_multiplier", "coin_bonus"]
         bonus_lines = [
@@ -1390,6 +1429,45 @@ class BattleApp:
         self.save_custom_content(**custom)
         self.refresh_admin_lists()
         messagebox.showinfo("Admin", f"Added enemy: {entry['name']}")
+
+    def admin_add_custom_consumable(self):
+        try:
+            entry = {
+                "id": self.admin_consumable_fields["id"].get().strip(),
+                "name": self.admin_consumable_fields["name"].get().strip(),
+                "cost": int(self.admin_consumable_fields["cost"].get() or 0),
+                "effect_type": self.admin_consumable_fields["effect_type"].get().strip(),
+                "power": int(self.admin_consumable_fields["power"].get()),
+                "description": self.admin_consumable_fields["description"].get().strip(),
+                "timing": self.admin_consumable_fields["timing"].get().strip(),
+            }
+        except ValueError:
+            messagebox.showinfo("Admin", "Consumable cost and power must be numbers.")
+            return
+        if not entry["id"] or not entry["name"]:
+            messagebox.showinfo("Admin", "Consumable needs an id and name.")
+            return
+        if entry["cost"] < 0 or entry["power"] <= 0:
+            messagebox.showinfo("Admin", "Cost must be >= 0 and power must be > 0.")
+            return
+        if entry["effect_type"] not in CONSUMABLE_EFFECT_TYPES:
+            messagebox.showinfo("Admin", "Effect type must be one of the allowed consumable effects.")
+            return
+        if entry["timing"] not in CONSUMABLE_TIMINGS:
+            messagebox.showinfo("Admin", "Timing must be combat, preparation, or both.")
+            return
+        base_ids = {item["id"] for item in SHOP_CONSUMABLES}
+        custom = self._read_custom_file_lists()
+        custom_ids = {item.get("id") for item in custom["custom_consumables"]}
+        if entry["id"] in base_ids or entry["id"] in custom_ids:
+            messagebox.showinfo("Admin", "A consumable with that id already exists.")
+            return
+        custom["custom_consumables"].append(entry)
+        self.save_custom_content(**custom)
+        if self._embedded_screen_visible(self.shop_frame):
+            self.refresh_shop_consumables_list()
+        self.refresh_admin_lists()
+        messagebox.showinfo("Admin", f"Added consumable: {entry['name']}")
 
     def admin_save_bonuses(self):
         try:
@@ -1471,6 +1549,44 @@ class BattleApp:
         self.refresh_admin_lists()
         messagebox.showinfo("Admin", f"Removed monster: {enemy_name}")
 
+    def admin_remove_selected_consumable(self):
+        selection = self.admin_consumables_list.curselection()
+        if not selection:
+            messagebox.showinfo("Admin", "Select a consumable to remove.")
+            return
+        consumable = self._admin_consumables_entries[selection[0]]
+        consumable_id = consumable.get("id")
+        if not consumable_id:
+            return
+        if not messagebox.askyesno("Admin", f"Remove consumable '{consumable['name']}' from the game?"):
+            return
+
+        custom = self._read_custom_file_lists()
+        base_ids = {entry["id"] for entry in SHOP_CONSUMABLES}
+        if consumable_id in base_ids:
+            removed = list(custom["removed_consumables"])
+            if consumable_id not in removed:
+                removed.append(consumable_id)
+        else:
+            custom["custom_consumables"] = [
+                entry for entry in custom["custom_consumables"] if entry.get("id") != consumable_id
+            ]
+            removed = custom["removed_consumables"]
+
+        self.save_custom_content(
+            custom["custom_items"],
+            custom["custom_mercs"],
+            custom["custom_enemies"],
+            removed_shop_items=custom["removed_shop_items"],
+            removed_enemies=custom["removed_enemies"],
+            custom_consumables=custom["custom_consumables"],
+            removed_consumables=removed,
+        )
+        if self._embedded_screen_visible(self.shop_frame):
+            self.refresh_shop_consumables_list()
+        self.refresh_admin_lists()
+        messagebox.showinfo("Admin", f"Removed consumable: {consumable['name']}")
+
     def admin_remove_selected_bonus(self):
         selection = self.admin_bonuses_list.curselection()
         if not selection:
@@ -1497,6 +1613,8 @@ class BattleApp:
             custom["custom_enemies"],
             removed_shop_items=custom["removed_shop_items"],
             removed_enemies=custom["removed_enemies"],
+            custom_consumables=custom["custom_consumables"],
+            removed_consumables=custom["removed_consumables"],
         )
         self.refresh_admin_lists()
         messagebox.showinfo("Admin", f"Reset {labels[bonus_key]} to default.")
@@ -1723,7 +1841,19 @@ class BattleApp:
                 continue
             template = get_consumable_template(consumable_id, self.shop_consumables)
             if template:
-                owned.append({"template": template, "quantity": qty})
+                owned.append({"template": template, "quantity": qty, "unknown": False})
+            else:
+                owned.append(
+                    {
+                        "template": {
+                            "id": consumable_id,
+                            "name": "Unknown Item",
+                            "description": "(No longer available)",
+                        },
+                        "quantity": qty,
+                        "unknown": True,
+                    }
+                )
         owned.sort(key=lambda entry: entry["template"]["name"])
         return owned
 
@@ -1738,6 +1868,8 @@ class BattleApp:
 
     def can_use_consumable(self, template):
         if not self.can_use_consumables_now():
+            return False
+        if not get_consumable_template(template.get("id"), self.shop_consumables):
             return False
         if self.consumable_quantity(template["id"]) <= 0:
             return False
@@ -1871,6 +2003,7 @@ class BattleApp:
         for entry in owned:
             template = entry["template"]
             qty = entry["quantity"]
+            unknown = entry.get("unknown", False)
             usable = self.can_use_consumable(template)
             row = ttk.Frame(list_frame)
             row.pack(fill=tk.X, pady=4)
@@ -1882,7 +2015,9 @@ class BattleApp:
                 font=("Segoe UI", 10, "bold"),
             ).pack(anchor="w")
             ttk.Label(info, text=template.get("description", ""), wraplength=300).pack(anchor="w")
-            if not usable:
+            if unknown:
+                ttk.Label(info, text="(No longer available)", wraplength=300).pack(anchor="w")
+            elif not usable:
                 ttk.Label(info, text="(Not usable right now)", wraplength=300).pack(anchor="w")
             ttk.Button(
                 row,
@@ -3912,11 +4047,15 @@ class BattleApp:
         custom_items = data.get("shop_items", [])
         custom_mercs = data.get("mercenaries", [])
         custom_enemies = data.get("enemies", [])
+        custom_consumables = data.get("consumables", [])
         removed_items = set(data.get("removed_shop_items", []))
         removed_enemies = set(data.get("removed_enemies", []))
+        removed_consumables = set(data.get("removed_consumables", []))
         base_items = [item for item in SHOP_EQUIPMENT if item["id"] not in removed_items]
         base_enemies = [enemy for enemy in ENEMY_THEMES if enemy["name"] not in removed_enemies]
+        base_consumables = [item for item in SHOP_CONSUMABLES if item["id"] not in removed_consumables]
         self.shop_equipment = merge_custom_lists(base_items, custom_items)
+        self.shop_consumables = merge_custom_lists(base_consumables, custom_consumables)
         self.mercenary_templates = merge_custom_lists(MERCENARY_TEMPLATES, custom_mercs)
         self.enemy_themes = merge_custom_lists(base_enemies, custom_enemies, key="name")
         bonuses = data.get("battle_bonuses", {})
@@ -3932,6 +4071,8 @@ class BattleApp:
         custom_enemies,
         removed_shop_items=None,
         removed_enemies=None,
+        custom_consumables=None,
+        removed_consumables=None,
     ):
         """Persist admin additions to game_custom.json."""
         existing = self._load_custom_file_raw()
@@ -3939,6 +4080,9 @@ class BattleApp:
             "shop_items": custom_items,
             "mercenaries": custom_mercs,
             "enemies": custom_enemies,
+            "consumables": (
+                custom_consumables if custom_consumables is not None else existing.get("consumables", [])
+            ),
             "removed_shop_items": (
                 removed_shop_items
                 if removed_shop_items is not None
@@ -3946,6 +4090,11 @@ class BattleApp:
             ),
             "removed_enemies": (
                 removed_enemies if removed_enemies is not None else existing.get("removed_enemies", [])
+            ),
+            "removed_consumables": (
+                removed_consumables
+                if removed_consumables is not None
+                else existing.get("removed_consumables", [])
             ),
             "battle_bonuses": self.battle_bonuses,
         }
@@ -3984,8 +4133,10 @@ class BattleApp:
             "custom_items": data.get("shop_items", []),
             "custom_mercs": data.get("mercenaries", []),
             "custom_enemies": data.get("enemies", []),
+            "custom_consumables": data.get("consumables", []),
             "removed_shop_items": data.get("removed_shop_items", []),
             "removed_enemies": data.get("removed_enemies", []),
+            "removed_consumables": data.get("removed_consumables", []),
         }
 
     def open_reset_stats_dialog(self):
