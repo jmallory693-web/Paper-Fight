@@ -2765,21 +2765,30 @@ class BattleApp:
             return []
         if not isinstance(scores, list):
             return []
+        def safe_int(value, default=0):
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return default
+
         cleaned = []
         for entry in scores:
             if not isinstance(entry, dict):
                 continue
-            cleaned.append(
-                {
-                    "enemies_defeated": int(entry.get("enemies_defeated", 0)),
-                    "highest_enemy_level_reached": int(entry.get("highest_enemy_level_reached", 0)),
-                    "total_coins_earned": int(entry.get("total_coins_earned", 0)),
-                    "total_xp_earned": int(entry.get("total_xp_earned", 0)),
-                    "final_player_level": int(entry.get("final_player_level", 1)),
-                    "final_race": str(entry.get("final_race", "Unknown")),
-                    "cause_of_defeat": str(entry.get("cause_of_defeat", "Unknown")),
-                }
-            )
+            try:
+                cleaned.append(
+                    {
+                        "enemies_defeated": safe_int(entry.get("enemies_defeated"), 0),
+                        "highest_enemy_level_reached": safe_int(entry.get("highest_enemy_level_reached"), 0),
+                        "total_coins_earned": safe_int(entry.get("total_coins_earned"), 0),
+                        "total_xp_earned": safe_int(entry.get("total_xp_earned"), 0),
+                        "final_player_level": safe_int(entry.get("final_player_level"), 1),
+                        "final_race": str(entry.get("final_race", "Unknown")),
+                        "cause_of_defeat": str(entry.get("cause_of_defeat", "Unknown")),
+                    }
+                )
+            except (TypeError, ValueError):
+                continue
         cleaned.sort(key=self._high_score_sort_key)
         return cleaned
 
