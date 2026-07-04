@@ -1,0 +1,35 @@
+{
+  "version": 2,
+  "race": "Human",
+  "attack": 5,
+  "defense": 5,
+  "health": 5,
+  "difficulty": "Normal",
+  "combat_role": "melee",
+  "equipment": {
+    "head": null,
+    "chest": {
+      "id": "worn_tunic",
+      "name": "Worn Tunic",
+      "slot": "chest",
+      "defense": 1
+    },
+    "legs": null,
+    "arms": null,
+    "weapon": {
+      "id": "rusty_dagger",
+      "name": "Rusty Dagger",
+      "slot": "weapon",
+      "attack": 1
+    },
+    "shield": {
+      "id": "wooden_shield",
+      "name": "Wooden Shield",
+      "slot": "shield",
+      "defense": 1
+    },
+    "ring1": null,
+    "ring2": null,
+    "amulet": null
+  }
+}

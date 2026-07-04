@@ -11,8 +11,10 @@ POWER_STRIKE_BONUS = 3
 REST_HEAL_BETWEEN_FIGHTS = 3
 BLOCK_DAMAGE_REDUCTION = 4
 STALEMATE_CHIP_DAMAGE = 1
-RUN_SAVE_VERSION = 1
+RUN_SAVE_VERSION = 2
 BUILD_SAVE_VERSION = 2
+BUILD_SLOT_COUNT = 3
+RUN_SLOT_COUNT = 3
 RESET_STAT_COST = 100
 LOOT_DROP_CHANCE = 0.35
 ADMIN_CLICKS_REQUIRED = 3
@@ -20,6 +22,75 @@ ADMIN_CLICKS_REQUIRED = 3
 BASE_ATTACK = 6
 BASE_DEFENSE = 2
 BASE_HEALTH = 25
+
+ROLE_ADVANTAGE_BONUS = 2
+COMBAT_ROLES = ("melee", "ranged", "cavalry")
+ROLE_BEATS = {"ranged": "melee", "melee": "cavalry", "cavalry": "ranged"}
+DEFAULT_COMBAT_ROLE = "melee"
+COMBAT_ROLE_DESCS = {
+    "melee": "Front-line fighter. Beats Cavalry.",
+    "ranged": "Strikes from distance. Beats Melee.",
+    "cavalry": "Fast striker. Beats Ranged.",
+}
+
+BOSS_NAME_PARTS = [
+    "Grimfang",
+    "Bloodhide",
+    "Ironclaw",
+    "Skittermaw",
+    "Blacktooth",
+    "Stonehide",
+    "Redmaw",
+    "Nightfang",
+]
+BOSS_EPITHETS = [
+    "the Unbroken",
+    "the Cruel",
+    "the Arena King",
+    "the Champion",
+    "the Bonebreaker",
+    "the Red-Eyed",
+    "the Scarred",
+    "the Old Terror",
+]
+BOSS_ATTACK_BONUS = 2
+BOSS_DEFENSE_BONUS = 1
+BOSS_HP_BONUS_MIN = 10
+BOSS_HP_BONUS_MAX = 20
+BOSS_XP_BONUS = 5
+BOSS_COIN_BONUS = 5
+
+DIFFICULTIES = {
+    "Easy": {
+        "attack_mod": -1,
+        "defense_mod": 0,
+        "health_mod": -5,
+        "coin_bonus": 0,
+        "desc": "Enemies have -1 Attack and -5 Max HP. Rewards unchanged.",
+    },
+    "Normal": {
+        "attack_mod": 0,
+        "defense_mod": 0,
+        "health_mod": 0,
+        "coin_bonus": 0,
+        "desc": "Standard arena challenge.",
+    },
+    "Hard": {
+        "attack_mod": 1,
+        "defense_mod": 0,
+        "health_mod": 8,
+        "coin_bonus": 2,
+        "desc": "Enemies have +1 Attack and +8 Max HP. +2 coins per victory.",
+    },
+    "Brutal": {
+        "attack_mod": 2,
+        "defense_mod": 1,
+        "health_mod": 15,
+        "coin_bonus": 5,
+        "desc": "Enemies have +2 Attack, +1 Defense, and +15 Max HP. +5 coins per victory.",
+    },
+}
+DEFAULT_DIFFICULTY = "Normal"
 
 # Playable races: small bonuses applied on top of the 15-point allocation.
 RACES = {
@@ -98,6 +169,127 @@ SHOP_EQUIPMENT = [
     {"id": "jade_amulet", "name": "Jade Amulet", "slot": "amulet", "health": 8, "price": 16},
 ]
 
+CONSUMABLE_EFFECT_TYPES = (
+    "heal",
+    "damage",
+    "defense_boost",
+    "attack_boost",
+    "cooldown_reduce",
+    "next_hit_reduction",
+)
+CONSUMABLE_TIMINGS = ("combat", "preparation", "both")
+CONSUMABLE_CATEGORIES = ("healing", "damage", "buff", "debuff", "other")
+SHOP_CONSUMABLE_TABS = [
+    ("healing", "Healing"),
+    ("damage", "Damage"),
+    ("buff", "Buff"),
+    ("debuff", "Debuff"),
+    ("other", "Other"),
+]
+
+SHOP_CONSUMABLES = [
+    {
+        "id": "minor_health_potion",
+        "name": "Minor Health Potion",
+        "cost": 8,
+        "effect_type": "heal",
+        "power": 10,
+        "description": "Restores 10 HP.",
+        "timing": "both",
+        "category": "healing",
+    },
+    {
+        "id": "greater_health_potion",
+        "name": "Greater Health Potion",
+        "cost": 18,
+        "effect_type": "heal",
+        "power": 25,
+        "description": "Restores 25 HP.",
+        "timing": "both",
+        "category": "healing",
+    },
+    {
+        "id": "field_salve",
+        "name": "Field Salve",
+        "cost": 5,
+        "effect_type": "heal",
+        "power": 6,
+        "description": "Restores 6 HP.",
+        "timing": "both",
+        "category": "healing",
+    },
+    {
+        "id": "fire_bomb",
+        "name": "Fire Bomb",
+        "cost": 14,
+        "effect_type": "damage",
+        "power": 10,
+        "description": "Deals 10 damage to the enemy.",
+        "timing": "combat",
+        "category": "damage",
+    },
+    {
+        "id": "acid_flask",
+        "name": "Acid Flask",
+        "cost": 10,
+        "effect_type": "damage",
+        "power": 7,
+        "description": "Deals 7 damage to the enemy.",
+        "timing": "combat",
+        "category": "damage",
+    },
+    {
+        "id": "throwing_knife",
+        "name": "Throwing Knife",
+        "cost": 6,
+        "effect_type": "damage",
+        "power": 5,
+        "description": "Deals 5 damage to the enemy.",
+        "timing": "combat",
+        "category": "damage",
+    },
+    {
+        "id": "ironbark_salve",
+        "name": "Ironbark Salve",
+        "cost": 12,
+        "effect_type": "defense_boost",
+        "power": 2,
+        "description": "+2 Defense for the current fight.",
+        "timing": "combat",
+        "category": "buff",
+    },
+    {
+        "id": "battle_tonic",
+        "name": "Battle Tonic",
+        "cost": 12,
+        "effect_type": "attack_boost",
+        "power": 2,
+        "description": "+2 Attack for the current fight.",
+        "timing": "combat",
+        "category": "buff",
+    },
+    {
+        "id": "focus_draught",
+        "name": "Focus Draught",
+        "cost": 9,
+        "effect_type": "cooldown_reduce",
+        "power": 1,
+        "description": "Reduces Power Strike cooldown by 1.",
+        "timing": "combat",
+        "category": "buff",
+    },
+    {
+        "id": "smoke_bomb",
+        "name": "Smoke Bomb",
+        "cost": 11,
+        "effect_type": "next_hit_reduction",
+        "power": 3,
+        "description": "Softens the next enemy hit by 3.",
+        "timing": "combat",
+        "category": "buff",
+    },
+]
+
 # Themed foes: stat mods stack on top of base level scaling.
 ENEMY_THEMES = [
     {
@@ -108,6 +300,7 @@ ENEMY_THEMES = [
         "defense_mod": -1,
         "health_mod": -7,
         "ai_style": "aggressive",
+        "combat_role": "melee",
     },
     {
         "name": "Feral Cat",
@@ -117,6 +310,7 @@ ENEMY_THEMES = [
         "defense_mod": 0,
         "health_mod": -5,
         "ai_style": "aggressive",
+        "combat_role": "melee",
     },
     {
         "name": "Goblin Scout",
@@ -126,6 +320,7 @@ ENEMY_THEMES = [
         "defense_mod": 1,
         "health_mod": -3,
         "ai_style": "tricky",
+        "combat_role": "ranged",
     },
     {
         "name": "Giant Spider",
@@ -135,6 +330,7 @@ ENEMY_THEMES = [
         "defense_mod": 0,
         "health_mod": -2,
         "ai_style": "tricky",
+        "combat_role": "melee",
     },
     {
         "name": "Wolf",
@@ -144,6 +340,7 @@ ENEMY_THEMES = [
         "defense_mod": 0,
         "health_mod": 0,
         "ai_style": "balanced",
+        "combat_role": "cavalry",
     },
     {
         "name": "Bandit Raider",
@@ -153,6 +350,7 @@ ENEMY_THEMES = [
         "defense_mod": 0,
         "health_mod": 2,
         "ai_style": "balanced",
+        "combat_role": "melee",
     },
     {
         "name": "Orc Brute",
@@ -162,6 +360,7 @@ ENEMY_THEMES = [
         "defense_mod": 1,
         "health_mod": 5,
         "ai_style": "bruiser",
+        "combat_role": "melee",
     },
     {
         "name": "Cave Troll",
@@ -171,6 +370,7 @@ ENEMY_THEMES = [
         "defense_mod": 2,
         "health_mod": 8,
         "ai_style": "bruiser",
+        "combat_role": "melee",
     },
 ]
 
@@ -192,6 +392,7 @@ MERCENARY_TEMPLATES = [
         "ability": "fortify",
         "ability_desc": "Fortify: brace and recover 3 HP.",
         "ai_style": "defensive",
+        "combat_role": "melee",
     },
     {
         "id": "swiftarrow",
@@ -204,6 +405,7 @@ MERCENARY_TEMPLATES = [
         "ability": "volley",
         "ability_desc": "Volley: ranged strike ignores 2 defense.",
         "ai_style": "aggressive",
+        "combat_role": "ranged",
     },
     {
         "id": "ironjaw",
@@ -216,6 +418,7 @@ MERCENARY_TEMPLATES = [
         "ability": "fury",
         "ability_desc": "Fury: reckless swing for +4 damage.",
         "ai_style": "aggressive",
+        "combat_role": "melee",
     },
     {
         "id": "mira_leaf",
@@ -228,6 +431,7 @@ MERCENARY_TEMPLATES = [
         "ability": "mend",
         "ability_desc": "Mend: restore 6 HP to you or an ally.",
         "ai_style": "support",
+        "combat_role": "ranged",
     },
     {
         "id": "shade",
@@ -240,6 +444,7 @@ MERCENARY_TEMPLATES = [
         "ability": "ambush",
         "ability_desc": "Ambush: bonus damage when the foe is wounded.",
         "ai_style": "tricky",
+        "combat_role": "cavalry",
     },
     {
         "id": "thornback",
@@ -252,6 +457,7 @@ MERCENARY_TEMPLATES = [
         "ability": "shield_wall",
         "ability_desc": "Shield Wall: block and reduce your damage taken.",
         "ai_style": "defensive",
+        "combat_role": "melee",
     },
     {
         "id": "ember",
@@ -264,8 +470,77 @@ MERCENARY_TEMPLATES = [
         "ability": "arc_bolt",
         "ability_desc": "Arc Bolt: reliable magical hit for 5 damage.",
         "ai_style": "tricky",
+        "combat_role": "ranged",
     },
 ]
+
+
+def role_has_advantage(attacker_role, defender_role):
+    if not attacker_role or not defender_role:
+        return False
+    if attacker_role not in COMBAT_ROLES or defender_role not in COMBAT_ROLES:
+        return False
+    return ROLE_BEATS.get(attacker_role) == defender_role
+
+
+def role_damage_bonus(attacker, defender):
+    attacker_role = getattr(attacker, "combat_role", None)
+    defender_role = getattr(defender, "combat_role", None)
+    if role_has_advantage(attacker_role, defender_role):
+        return ROLE_ADVANTAGE_BONUS
+    return 0
+
+
+def format_combat_role(role):
+    return role.capitalize() if role in COMBAT_ROLES else ""
+
+
+def normalize_combat_role(role):
+    if isinstance(role, str) and role.lower() in COMBAT_ROLES:
+        return role.lower()
+    return DEFAULT_COMBAT_ROLE
+
+
+REWARD_OPTION_KEYS = frozenset({"attack", "defense", "health", "coins", "heal", "wound"})
+
+
+def reward_options_to_json(options):
+    if not options:
+        return None
+    return [[label, detail, key, value] for label, detail, key, value in options]
+
+
+def is_boss_level(level):
+    return level > 0 and level % 5 == 0
+
+
+def generate_boss_name(theme):
+    prefix = random.choice(BOSS_NAME_PARTS)
+    epithet = random.choice(BOSS_EPITHETS)
+    return f"{prefix} {epithet}"
+
+
+def enemy_display_name(enemy):
+    if getattr(enemy, "is_boss", False) and getattr(enemy, "boss_name", ""):
+        return enemy.boss_name
+    return enemy.enemy_type or enemy.name
+
+
+def reward_options_from_json(data):
+    if not isinstance(data, list):
+        return None
+    options = []
+    for entry in data:
+        if not isinstance(entry, list) or len(entry) != 4:
+            continue
+        label, detail, key, value = entry
+        if key not in REWARD_OPTION_KEYS:
+            continue
+        try:
+            options.append((str(label), str(detail), str(key), int(value)))
+        except (TypeError, ValueError):
+            continue
+    return options if len(options) >= 3 else None
 
 
 def mercenary_power_rating(template):
@@ -287,6 +562,34 @@ def get_mercenary_template(template_id, templates=None):
         if template["id"] == template_id:
             return template
     return None
+
+
+def get_consumable_template(consumable_id, templates=None):
+    pool = templates if templates is not None else SHOP_CONSUMABLES
+    for template in pool:
+        if template.get("id") == consumable_id:
+            return template
+    return None
+
+
+def normalize_consumable_category(value):
+    if value in CONSUMABLE_CATEGORIES:
+        return value
+    return "other"
+
+
+def consumable_category_for(template):
+    category = template.get("category")
+    if category in CONSUMABLE_CATEGORIES:
+        return category
+    effect_type = template.get("effect_type", "")
+    if effect_type == "heal":
+        return "healing"
+    if effect_type == "damage":
+        return "damage"
+    if effect_type in ("attack_boost", "defense_boost", "cooldown_reduce", "next_hit_reduction"):
+        return "buff"
+    return "other"
 
 
 def merge_custom_lists(base_list, custom_list, key="id"):
@@ -312,6 +615,9 @@ class Combatant:
         flavor="",
         ai_style="balanced",
         enemy_type="",
+        combat_role=None,
+        is_boss=False,
+        boss_name="",
     ):
         self.name = name
         self.attack = attack
@@ -322,6 +628,9 @@ class Combatant:
         self.flavor = flavor
         self.ai_style = ai_style
         self.enemy_type = enemy_type
+        self.combat_role = combat_role
+        self.is_boss = is_boss
+        self.boss_name = boss_name
 
     def alive(self):
         return self.health > 0
@@ -335,6 +644,8 @@ class Mercenary:
         self.name = template["name"]
         self.race = template["race"]
         self.role = template["role"]
+        combat_role = template.get("combat_role", "melee")
+        self.combat_role = combat_role if combat_role in COMBAT_ROLES else "melee"
         self.attack = template["attack"]
         self.defense = template["defense"]
         self.health = template["health"]
@@ -351,7 +662,7 @@ class Mercenary:
 
     def to_combatant(self):
         """Lightweight view for shared damage math."""
-        return Combatant(self.name, self.attack, self.defense, self.health)
+        return Combatant(self.name, self.attack, self.defense, self.health, combat_role=self.combat_role)
 
     def power_rating(self):
         return mercenary_power_rating(self.template)
@@ -367,6 +678,7 @@ class BattleApp:
 
         # Runtime content lists (base data + admin/custom additions) — before make_enemy.
         self.shop_equipment = [dict(item) for item in SHOP_EQUIPMENT]
+        self.shop_consumables = [dict(item) for item in SHOP_CONSUMABLES]
         self.mercenary_templates = [dict(item) for item in MERCENARY_TEMPLATES]
         self.enemy_themes = [dict(item) for item in ENEMY_THEMES]
         self.battle_bonuses = {"xp_multiplier": 1.0, "coin_bonus": 0}
@@ -379,6 +691,7 @@ class BattleApp:
         self.player_xp = 0
         self.enemy_level = 1
         self.coins = 10
+        self.selected_difficulty = DEFAULT_DIFFICULTY
         self.enemy = self.make_enemy(self.enemy_level)
         self.in_combat = False
         self.in_preparation = False
@@ -388,9 +701,15 @@ class BattleApp:
         self.awaiting_reward = False
         self.fight_timer_id = None
         self._player_damage_reduction_next = False
+        self._player_damage_reduction_amount = 0
+        self._fight_attack_bonus = 0
+        self._fight_defense_bonus = 0
+        self.consumable_inventory = {}
+        self.field_search_used_for_enemy_level = -1
 
         # Build, race, equipment, and bonus tracking.
         self.selected_race = "Human"
+        self.selected_combat_role = DEFAULT_COMBAT_ROLE
         self.stat_bonuses = {"attack": 0, "defense": 0, "health": 0}
         self.equipment = {slot: None for slot in EQUIPMENT_SLOTS}
         self.inventory = []
@@ -412,10 +731,13 @@ class BattleApp:
         self.save_path = os.path.join(os.path.dirname(__file__), "player_build.json")
         self.build_save_path = os.path.join(os.path.dirname(__file__), "saved_build.json")
         self.run_save_path = os.path.join(os.path.dirname(__file__), "player_run.json")
+        self.high_scores_path = os.path.join(os.path.dirname(__file__), "high_scores.json")
         self.saved_equipment_from_build = None
         self.admin_unlocked = True
         self.title_click_count = 0
         self.pending_loot_item = None
+        self.pending_reward_options = None
+        self.run_summary = {}
 
         self.build_ui()
         self.show_main_menu()
@@ -443,18 +765,21 @@ class BattleApp:
         menu_buttons = ttk.Frame(self.menu_frame)
         menu_buttons.pack()
         ttk.Button(menu_buttons, text="New Build", command=self.start_new_build, width=22).pack(pady=4)
-        ttk.Button(menu_buttons, text="Load Build", command=self.load_build_from_file, width=22).pack(pady=4)
+        self.load_build_btn = ttk.Button(
+            menu_buttons, text="Load Build", command=self.load_build_menu, state=tk.DISABLED, width=22
+        )
+        self.load_build_btn.pack(pady=4)
         self.save_build_btn = ttk.Button(
-            menu_buttons, text="Save Build", command=self.save_build_to_file, state=tk.DISABLED, width=22
+            menu_buttons, text="Save Build", command=self.save_build_menu, state=tk.DISABLED, width=22
         )
         self.save_build_btn.pack(pady=4)
         ttk.Separator(menu_buttons, orient="horizontal").pack(fill=tk.X, pady=8)
         self.save_run_btn = ttk.Button(
-            menu_buttons, text="Save Run", command=self.save_run_to_file, state=tk.DISABLED, width=22
+            menu_buttons, text="Save Run", command=self.save_run_menu, state=tk.DISABLED, width=22
         )
         self.save_run_btn.pack(pady=4)
         self.load_run_btn = ttk.Button(
-            menu_buttons, text="Load Run", command=self.load_run_from_file, state=tk.DISABLED, width=22
+            menu_buttons, text="Load Run", command=self.load_run_menu, state=tk.DISABLED, width=22
         )
         self.load_run_btn.pack(pady=4)
         ttk.Button(menu_buttons, text="Quit", command=self.quit_game, width=22).pack(pady=4)
@@ -462,6 +787,14 @@ class BattleApp:
             self.menu_frame, text="Admin Mode", command=self.open_admin_panel, width=22
         )
         self.admin_btn.pack(pady=(10, 4))
+        ttk.Label(self.menu_frame, text="Top Runs", font=("Segoe UI", 11, "bold")).pack(pady=(8, 2))
+        self.menu_high_scores_var = tk.StringVar(value="No high scores yet.")
+        ttk.Label(
+            self.menu_frame,
+            textvariable=self.menu_high_scores_var,
+            justify="left",
+            wraplength=480,
+        ).pack(pady=(0, 4))
         self.menu_status_var = tk.StringVar(value="Create or load a build to begin.")
         self.menu_status_label = ttk.Label(self.menu_frame, textvariable=self.menu_status_var)
         self.menu_status_label.pack(pady=(12, 0))
@@ -492,6 +825,36 @@ class BattleApp:
         self.race_combo.bind("<<ComboboxSelected>>", self.on_race_changed)
         self.race_desc_var = tk.StringVar()
         ttk.Label(self.creation_frame, textvariable=self.race_desc_var, wraplength=480).pack(pady=(4, 8))
+        difficulty_row = ttk.Frame(self.creation_frame)
+        difficulty_row.pack(pady=4)
+        ttk.Label(difficulty_row, text="Difficulty:").pack(side=tk.LEFT, padx=(0, 8))
+        self.difficulty_var = tk.StringVar(value=self.selected_difficulty)
+        self.difficulty_combo = ttk.Combobox(
+            difficulty_row,
+            textvariable=self.difficulty_var,
+            values=list(DIFFICULTIES.keys()),
+            state="readonly",
+            width=14,
+        )
+        self.difficulty_combo.pack(side=tk.LEFT)
+        self.difficulty_combo.bind("<<ComboboxSelected>>", self.on_difficulty_changed)
+        self.difficulty_desc_var = tk.StringVar()
+        ttk.Label(self.creation_frame, textvariable=self.difficulty_desc_var, wraplength=480).pack(pady=(4, 8))
+        combat_role_row = ttk.Frame(self.creation_frame)
+        combat_role_row.pack(pady=4)
+        ttk.Label(combat_role_row, text="Combat Role:").pack(side=tk.LEFT, padx=(0, 8))
+        self.combat_role_var = tk.StringVar(value=format_combat_role(self.selected_combat_role))
+        self.combat_role_combo = ttk.Combobox(
+            combat_role_row,
+            textvariable=self.combat_role_var,
+            values=[format_combat_role(role) for role in COMBAT_ROLES],
+            state="readonly",
+            width=14,
+        )
+        self.combat_role_combo.pack(side=tk.LEFT)
+        self.combat_role_combo.bind("<<ComboboxSelected>>", self.on_combat_role_changed)
+        self.combat_role_desc_var = tk.StringVar()
+        ttk.Label(self.creation_frame, textvariable=self.combat_role_desc_var, wraplength=480).pack(pady=(4, 8))
         self.creation_points_var = tk.StringVar(value="Points left: 15")
         ttk.Label(self.creation_frame, textvariable=self.creation_points_var, font=("Segoe UI", 11, "bold")).pack()
         rows = ttk.Frame(self.creation_frame)
@@ -659,6 +1022,17 @@ class BattleApp:
         )
         ttk.Label(self.enemy_card, textvariable=self.enemy_stats_var).pack(anchor="w", pady=(1, 0))
 
+        self.enemy_preview_panel = ttk.LabelFrame(right_col, text="Enemy Preview", padding=6)
+        self.enemy_preview_panel.grid(row=1, column=0, sticky="ew", pady=(6, 0))
+        self.enemy_preview_var = tk.StringVar(value="")
+        ttk.Label(
+            self.enemy_preview_panel,
+            textvariable=self.enemy_preview_var,
+            wraplength=260,
+            justify="left",
+        ).pack(anchor="w")
+        self.enemy_preview_panel.grid_remove()
+
         ttk.Separator(self.main_frame, orient="horizontal").grid(row=3, column=0, columnspan=3, sticky="ew", pady=4)
 
         # --- Row 4: bottom half — battle log (left) + arena status (right) ---
@@ -687,7 +1061,7 @@ class BattleApp:
         self.action_hint = tk.StringVar(
             value="Swing trades blows, Block softens hits, Power Strike deals heavy damage (2-turn cooldown)."
         )
-        self.phase_info_var = tk.StringVar(value="Preparation: use Shop or Recruit, then strike to begin.")
+        self.phase_info_var = tk.StringVar(value="Town is your hub. Enter Arena when ready to fight.")
         ttk.Label(info_panel, textvariable=self.status_var, font=("Segoe UI", 10, "bold"), wraplength=300).pack(
             anchor="nw", pady=(0, 6)
         )
@@ -710,22 +1084,19 @@ class BattleApp:
         self.main_menu_btn = ttk.Button(footer, text="Main Menu", command=self.return_to_main_menu)
         self.main_menu_btn.pack(side=tk.LEFT, padx=4)
         self.save_run_footer_btn = ttk.Button(
-            footer, text="Save Run", command=self.save_run_to_file, state=tk.DISABLED
+            footer, text="Save Run", command=self.save_run_menu, state=tk.DISABLED
         )
         self.save_run_footer_btn.pack(side=tk.LEFT, padx=4)
-        self.character_btn = ttk.Button(footer, text="Character", command=self.open_character_panel, state=tk.DISABLED)
-        self.character_btn.pack(side=tk.RIGHT, padx=4)
-        self.recruit_btn = ttk.Button(footer, text="Recruit", command=self.open_recruit, state=tk.DISABLED)
-        self.recruit_btn.pack(side=tk.RIGHT, padx=4)
-        self.shop_btn = ttk.Button(footer, text="Shop", command=self.open_shop, state=tk.DISABLED)
-        self.shop_btn.pack(side=tk.RIGHT, padx=4)
-        self.play_again_btn = ttk.Button(
-            footer, text="Start New Run", command=self.start_new_run, state=tk.DISABLED
-        )
-        self.play_again_btn.pack(side=tk.RIGHT, padx=4)
+        self.town_btn = ttk.Button(footer, text="Town", command=self.open_town, state=tk.DISABLED)
+        self.town_btn.pack(side=tk.RIGHT, padx=4)
+        self.use_item_btn = ttk.Button(footer, text="Use Item", command=self.open_use_consumables_dialog, state=tk.DISABLED)
+        self.use_item_btn.pack(side=tk.RIGHT, padx=4)
 
         self._build_embedded_shop_screen()
         self._build_embedded_recruit_screen()
+        self._build_embedded_town_screen()
+        self._build_embedded_dungeons_screen()
+        self._build_embedded_fields_screen()
         self._build_embedded_admin_screen()
 
     def _build_embedded_shop_screen(self):
@@ -743,12 +1114,15 @@ class BattleApp:
             wraplength=520,
         ).pack(pady=(4, 10))
 
-        consumables = ttk.LabelFrame(self.shop_frame, text="Consumables", padding=8)
-        consumables.pack(fill=tk.X, pady=6)
-        ttk.Label(consumables, text="Health Salve — 10 coins — restores 12 HP").pack(anchor="w")
-        ttk.Button(consumables, text="Buy Health Salve", command=self.buy_health_salve).pack(anchor="w", pady=4)
-        ttk.Label(consumables, text="Iron Tonic — 15 coins — +1 Defense for this run").pack(anchor="w", pady=(6, 0))
-        ttk.Button(consumables, text="Buy Iron Tonic", command=self.buy_iron_tonic).pack(anchor="w", pady=4)
+        consumables_section = ttk.LabelFrame(self.shop_frame, text="Consumables", padding=8)
+        consumables_section.pack(fill=tk.BOTH, expand=True, pady=6)
+        self.shop_consumables_notebook = ttk.Notebook(consumables_section)
+        self.shop_consumables_notebook.pack(fill=tk.BOTH, expand=True)
+        self.shop_consumables_tab_frames = {}
+        for tab_key, label in SHOP_CONSUMABLE_TABS:
+            tab = ttk.Frame(self.shop_consumables_notebook, padding=6)
+            self.shop_consumables_notebook.add(tab, text=label)
+            self.shop_consumables_tab_frames[tab_key] = self._build_scrollable_list_frame(tab)
 
         gear_section = ttk.LabelFrame(self.shop_frame, text="Equipment", padding=8)
         gear_section.pack(fill=tk.BOTH, expand=True, pady=6)
@@ -790,6 +1164,92 @@ class BattleApp:
         recruit_actions.pack(fill=tk.X, pady=(8, 0))
         ttk.Button(recruit_actions, text="Back to Arena", command=self.close_recruit, width=18).pack(side=tk.LEFT)
 
+    def _build_embedded_town_screen(self):
+        """Town hub for non-combat services between fights."""
+        self.town_frame = ttk.Frame(self.root, padding=16)
+        self.town_frame.pack_forget()
+        ttk.Label(self.town_frame, text="Town", font=("Segoe UI", 18, "bold")).pack(pady=(8, 4))
+        ttk.Label(
+            self.town_frame,
+            text="Your hub between duels — shop, recruit allies, review your character, and choose destinations.",
+            wraplength=520,
+        ).pack(pady=(4, 10))
+
+        destinations = ttk.LabelFrame(self.town_frame, text="Destinations", padding=12)
+        destinations.pack(fill=tk.X, pady=6)
+        ttk.Button(destinations, text="Arena", command=self.open_arena, width=22).pack(anchor="w", pady=4)
+        ttk.Button(destinations, text="Dungeons", command=self.open_dungeons, width=22).pack(anchor="w", pady=4)
+        ttk.Button(destinations, text="Fields", command=self.open_fields, width=22).pack(anchor="w", pady=4)
+
+        services = ttk.LabelFrame(self.town_frame, text="Services", padding=12)
+        services.pack(fill=tk.X, pady=6)
+        self.town_character_btn = ttk.Button(
+            services, text="Character", command=self.open_character_panel, width=22
+        )
+        self.town_character_btn.pack(anchor="w", pady=4)
+        self.town_shop_btn = ttk.Button(services, text="Shop", command=self.open_shop, width=22)
+        self.town_shop_btn.pack(anchor="w", pady=4)
+        self.town_recruit_btn = ttk.Button(services, text="Recruit", command=self.open_recruit, width=22)
+        self.town_recruit_btn.pack(anchor="w", pady=4)
+        self.town_use_item_btn = ttk.Button(
+            services, text="Use Item", command=self.open_use_consumables_dialog, width=22
+        )
+        self.town_use_item_btn.pack(anchor="w", pady=4)
+
+        town_actions = ttk.Frame(self.town_frame)
+        town_actions.pack(fill=tk.X, pady=(12, 0))
+        self.town_save_run_btn = ttk.Button(
+            town_actions, text="Save Run", command=self.save_run_menu, state=tk.DISABLED
+        )
+        self.town_save_run_btn.pack(side=tk.LEFT, padx=8)
+        self.town_main_menu_btn = ttk.Button(
+            town_actions, text="Main Menu", command=self.return_to_main_menu, width=18
+        )
+        self.town_main_menu_btn.pack(side=tk.RIGHT)
+
+    def _build_embedded_dungeons_screen(self):
+        """Dungeon destination — combat coming in a later pass."""
+        self.dungeons_frame = ttk.Frame(self.root, padding=16)
+        self.dungeons_frame.pack_forget()
+        ttk.Label(self.dungeons_frame, text="Dungeons", font=("Segoe UI", 18, "bold")).pack(pady=(8, 4))
+        ttk.Label(
+            self.dungeons_frame,
+            text="Deeper threats await below the town. Harder foes and richer rewards are coming soon.",
+            wraplength=520,
+        ).pack(pady=(4, 10))
+        ttk.Button(
+            self.dungeons_frame,
+            text="Challenge Dungeon Foe (Coming next)",
+            state=tk.DISABLED,
+            width=32,
+        ).pack(anchor="w", pady=6)
+        dungeon_actions = ttk.Frame(self.dungeons_frame)
+        dungeon_actions.pack(fill=tk.X, pady=(12, 0))
+        ttk.Button(dungeon_actions, text="Back to Town", command=self.close_dungeons, width=18).pack(side=tk.LEFT)
+
+    def _build_embedded_fields_screen(self):
+        """Fields destination — search for supplies between arena fights."""
+        self.fields_frame = ttk.Frame(self.root, padding=16)
+        self.fields_frame.pack_forget()
+        ttk.Label(self.fields_frame, text="Fields", font=("Segoe UI", 18, "bold")).pack(pady=(8, 4))
+        ttk.Label(
+            self.fields_frame,
+            text="Search the outskirts for coins, supplies, or a moment's rest before your next duel.",
+            wraplength=520,
+        ).pack(pady=(4, 10))
+        self.fields_status_var = tk.StringVar(value="")
+        ttk.Label(self.fields_frame, textvariable=self.fields_status_var, wraplength=520).pack(anchor="w", pady=4)
+        self.fields_search_btn = ttk.Button(
+            self.fields_frame,
+            text="Search Fields",
+            command=self.search_fields,
+            width=22,
+        )
+        self.fields_search_btn.pack(anchor="w", pady=6)
+        fields_actions = ttk.Frame(self.fields_frame)
+        fields_actions.pack(fill=tk.X, pady=(12, 0))
+        ttk.Button(fields_actions, text="Back to Town", command=self.close_fields, width=18).pack(side=tk.LEFT)
+
     def _build_embedded_admin_screen(self):
         """Admin tools as a full in-game screen (not a popup)."""
         self.admin_frame = ttk.Frame(self.root, padding=16)
@@ -797,7 +1257,7 @@ class BattleApp:
         ttk.Label(self.admin_frame, text="Admin Mode", font=("Segoe UI", 18, "bold")).pack(pady=(8, 4))
         ttk.Label(
             self.admin_frame,
-            text="Add custom items, mercenaries, enemies, and tune battle win bonuses.",
+            text="Add custom items, mercenaries, enemies, consumables, and tune battle win bonuses.",
             wraplength=520,
         ).pack(pady=(0, 8))
 
@@ -806,10 +1266,12 @@ class BattleApp:
         item_tab = ttk.Frame(notebook, padding=8)
         merc_tab = ttk.Frame(notebook, padding=8)
         enemy_tab = ttk.Frame(notebook, padding=8)
+        consumable_tab = ttk.Frame(notebook, padding=8)
         bonus_tab = ttk.Frame(notebook, padding=8)
         notebook.add(item_tab, text="Items")
         notebook.add(merc_tab, text="Mercenaries")
         notebook.add(enemy_tab, text="Enemies")
+        notebook.add(consumable_tab, text="Consumables")
         notebook.add(bonus_tab, text="Bonuses")
 
         item_form = ttk.Frame(item_tab)
@@ -886,6 +1348,31 @@ class BattleApp:
             enemy_tab, "Existing Monsters", remove_command=self.admin_remove_selected_enemy
         )
 
+        consumable_form = ttk.Frame(consumable_tab)
+        consumable_form.pack(fill=tk.X)
+        self.admin_consumable_fields = {}
+        consumable_defaults = [
+            ("ID", "id", "custom_consumable"),
+            ("Name", "name", "Custom Potion"),
+            ("Cost", "cost", "10"),
+            ("Effect Type", "effect_type", "heal"),
+            ("Power", "power", "10"),
+            ("Description", "description", "A custom consumable."),
+            ("Timing", "timing", "both"),
+            ("Category", "category", "healing"),
+        ]
+        for idx, (label, key, default) in enumerate(consumable_defaults):
+            ttk.Label(consumable_form, text=label).grid(row=idx, column=0, sticky="w", pady=2)
+            var = tk.StringVar(value=default)
+            self.admin_consumable_fields[key] = var
+            ttk.Entry(consumable_form, textvariable=var, width=28).grid(row=idx, column=1, sticky="w", pady=2)
+        ttk.Button(consumable_form, text="Add Consumable", command=self.admin_add_custom_consumable).grid(
+            row=len(consumable_defaults), column=0, columnspan=2, pady=8
+        )
+        self.admin_consumables_list = self._build_admin_list_box(
+            consumable_tab, "Existing Consumables", remove_command=self.admin_remove_selected_consumable
+        )
+
         bonus_form = ttk.Frame(bonus_tab)
         bonus_form.pack(fill=tk.X)
         ttk.Label(bonus_form, text="XP Multiplier").grid(row=0, column=0, sticky="w", pady=4)
@@ -960,6 +1447,14 @@ class BattleApp:
             f"HP {enemy.get('health_mod', 0):+d} — {enemy.get('ai_style', 'balanced')}{custom}"
         )
 
+    def _format_admin_consumable_line(self, consumable):
+        custom = " (custom)" if consumable.get("id") not in {entry["id"] for entry in SHOP_CONSUMABLES} else ""
+        return (
+            f"{consumable['name']} [{consumable.get('id', '?')}] — {consumable.get('cost', 0)} coins — "
+            f"{consumable.get('effect_type', '?')} {consumable.get('power', 0)} — "
+            f"{consumable.get('timing', 'both')} — {consumable.get('description', '')}{custom}"
+        )
+
     def refresh_admin_lists(self):
         if not hasattr(self, "admin_items_list"):
             return
@@ -977,6 +1472,11 @@ class BattleApp:
         self._refresh_admin_listbox(
             self.admin_enemies_list,
             [self._format_admin_enemy_line(enemy) for enemy in self._admin_enemies_entries],
+        )
+        self._admin_consumables_entries = list(self.shop_consumables)
+        self._refresh_admin_listbox(
+            self.admin_consumables_list,
+            [self._format_admin_consumable_line(consumable) for consumable in self._admin_consumables_entries],
         )
         self._admin_bonus_keys = ["xp_multiplier", "coin_bonus"]
         bonus_lines = [
@@ -1057,6 +1557,53 @@ class BattleApp:
         self.refresh_admin_lists()
         messagebox.showinfo("Admin", f"Added enemy: {entry['name']}")
 
+    def admin_add_custom_consumable(self):
+        try:
+            entry = {
+                "id": self.admin_consumable_fields["id"].get().strip(),
+                "name": self.admin_consumable_fields["name"].get().strip(),
+                "cost": int(self.admin_consumable_fields["cost"].get() or 0),
+                "effect_type": self.admin_consumable_fields["effect_type"].get().strip(),
+                "power": int(self.admin_consumable_fields["power"].get()),
+                "description": self.admin_consumable_fields["description"].get().strip(),
+                "timing": self.admin_consumable_fields["timing"].get().strip(),
+            }
+            category_raw = self.admin_consumable_fields["category"].get().strip()
+        except ValueError:
+            messagebox.showinfo("Admin", "Consumable cost and power must be numbers.")
+            return
+        if not entry["id"] or not entry["name"]:
+            messagebox.showinfo("Admin", "Consumable needs an id and name.")
+            return
+        if entry["cost"] < 0 or entry["power"] <= 0:
+            messagebox.showinfo("Admin", "Cost must be >= 0 and power must be > 0.")
+            return
+        if entry["effect_type"] not in CONSUMABLE_EFFECT_TYPES:
+            messagebox.showinfo("Admin", "Effect type must be one of the allowed consumable effects.")
+            return
+        if entry["timing"] not in CONSUMABLE_TIMINGS:
+            messagebox.showinfo("Admin", "Timing must be combat, preparation, or both.")
+            return
+        if category_raw:
+            if category_raw not in CONSUMABLE_CATEGORIES:
+                messagebox.showinfo("Admin", "Category must be healing, damage, buff, debuff, or other.")
+                return
+            entry["category"] = category_raw
+        else:
+            entry["category"] = consumable_category_for(entry)
+        base_ids = {item["id"] for item in SHOP_CONSUMABLES}
+        custom = self._read_custom_file_lists()
+        custom_ids = {item.get("id") for item in custom["custom_consumables"]}
+        if entry["id"] in base_ids or entry["id"] in custom_ids:
+            messagebox.showinfo("Admin", "A consumable with that id already exists.")
+            return
+        custom["custom_consumables"].append(entry)
+        self.save_custom_content(**custom)
+        if self._embedded_screen_visible(self.shop_frame):
+            self.refresh_shop_consumables_list()
+        self.refresh_admin_lists()
+        messagebox.showinfo("Admin", f"Added consumable: {entry['name']}")
+
     def admin_save_bonuses(self):
         try:
             self.battle_bonuses["xp_multiplier"] = float(self.admin_xp_var.get())
@@ -1084,14 +1631,14 @@ class BattleApp:
         custom = self._read_custom_file_lists()
         base_ids = {entry["id"] for entry in SHOP_EQUIPMENT}
         if item_id in base_ids:
-            removed = list(custom["removed_items"])
+            removed = list(custom["removed_shop_items"])
             if item_id not in removed:
                 removed.append(item_id)
         else:
             custom["custom_items"] = [
                 entry for entry in custom["custom_items"] if entry.get("id") != item_id
             ]
-            removed = custom["removed_items"]
+            removed = custom["removed_shop_items"]
 
         self.save_custom_content(
             custom["custom_items"],
@@ -1137,6 +1684,44 @@ class BattleApp:
         self.refresh_admin_lists()
         messagebox.showinfo("Admin", f"Removed monster: {enemy_name}")
 
+    def admin_remove_selected_consumable(self):
+        selection = self.admin_consumables_list.curselection()
+        if not selection:
+            messagebox.showinfo("Admin", "Select a consumable to remove.")
+            return
+        consumable = self._admin_consumables_entries[selection[0]]
+        consumable_id = consumable.get("id")
+        if not consumable_id:
+            return
+        if not messagebox.askyesno("Admin", f"Remove consumable '{consumable['name']}' from the game?"):
+            return
+
+        custom = self._read_custom_file_lists()
+        base_ids = {entry["id"] for entry in SHOP_CONSUMABLES}
+        if consumable_id in base_ids:
+            removed = list(custom["removed_consumables"])
+            if consumable_id not in removed:
+                removed.append(consumable_id)
+        else:
+            custom["custom_consumables"] = [
+                entry for entry in custom["custom_consumables"] if entry.get("id") != consumable_id
+            ]
+            removed = custom["removed_consumables"]
+
+        self.save_custom_content(
+            custom["custom_items"],
+            custom["custom_mercs"],
+            custom["custom_enemies"],
+            removed_shop_items=custom["removed_shop_items"],
+            removed_enemies=custom["removed_enemies"],
+            custom_consumables=custom["custom_consumables"],
+            removed_consumables=removed,
+        )
+        if self._embedded_screen_visible(self.shop_frame):
+            self.refresh_shop_consumables_list()
+        self.refresh_admin_lists()
+        messagebox.showinfo("Admin", f"Removed consumable: {consumable['name']}")
+
     def admin_remove_selected_bonus(self):
         selection = self.admin_bonuses_list.curselection()
         if not selection:
@@ -1161,8 +1746,10 @@ class BattleApp:
             custom["custom_items"],
             custom["custom_mercs"],
             custom["custom_enemies"],
-            removed_shop_items=custom["removed_items"],
+            removed_shop_items=custom["removed_shop_items"],
             removed_enemies=custom["removed_enemies"],
+            custom_consumables=custom["custom_consumables"],
+            removed_consumables=custom["removed_consumables"],
         )
         self.refresh_admin_lists()
         messagebox.showinfo("Admin", f"Reset {labels[bonus_key]} to default.")
@@ -1227,15 +1814,61 @@ class BattleApp:
                 detail = self.format_item_detail(item)
                 row = ttk.Frame(frame)
                 row.pack(fill=tk.X, pady=4)
+                info = ttk.Frame(row)
+                info.pack(side=tk.LEFT, anchor="w", fill=tk.X, expand=True)
                 ttk.Label(
-                    row,
+                    info,
                     text=f"{item['name']} — {item['price']} coins — {detail}",
                     wraplength=360,
-                ).pack(side=tk.LEFT, anchor="w")
+                ).pack(anchor="w")
+                for line in self._shop_equipped_comparison_text(item).split("\n"):
+                    ttk.Label(info, text=line, wraplength=360).pack(anchor="w")
                 ttk.Button(
                     row,
                     text=f"Buy ({item['price']})",
                     command=lambda gear=item: self.buy_equipment(gear),
+                ).pack(side=tk.RIGHT, padx=(8, 0))
+
+    def refresh_shop_consumables_list(self):
+        if not hasattr(self, "shop_consumables_tab_frames"):
+            return
+
+        grouped = {tab_key: [] for tab_key in self.shop_consumables_tab_frames}
+        for item in self.shop_consumables:
+            category = consumable_category_for(item)
+            if category not in grouped:
+                category = "other"
+            grouped[category].append(item)
+
+        for tab_key, frame in self.shop_consumables_tab_frames.items():
+            for child in frame.winfo_children():
+                child.destroy()
+
+            items = grouped.get(tab_key, [])
+            if not items:
+                ttk.Label(
+                    frame,
+                    text="No consumables in this category.",
+                    wraplength=420,
+                ).pack(anchor="w")
+                continue
+
+            for item in items:
+                row = ttk.Frame(frame)
+                row.pack(fill=tk.X, pady=4)
+                info = ttk.Frame(row)
+                info.pack(side=tk.LEFT, anchor="w", fill=tk.X, expand=True)
+                owned = self.consumable_quantity(item["id"])
+                owned_text = f"  (owned: {owned})" if owned else ""
+                ttk.Label(
+                    info,
+                    text=f"{item['name']} — {item['cost']} coins — {item.get('description', '')}{owned_text}",
+                    wraplength=360,
+                ).pack(anchor="w")
+                ttk.Button(
+                    row,
+                    text=f"Buy ({item['cost']})",
+                    command=lambda consumable=item: self.buy_consumable(consumable),
                 ).pack(side=tk.RIGHT, padx=(8, 0))
 
     def log(self, text):
@@ -1302,6 +1935,8 @@ class BattleApp:
             self.player.health += max_health - old_max
         self.player.max_health = max_health
         self.player.health = min(self.player.health, self.player.max_health)
+        self.player.combat_role = self.selected_combat_role
+        self.apply_fight_consumable_bonuses()
 
     def init_starting_equipment(self):
         """Equip the default starting loadout or gear from a saved build."""
@@ -1330,6 +1965,261 @@ class BattleApp:
                 return True
         return False
 
+    def add_consumable(self, consumable_id, quantity=1):
+        qty = max(0, int(quantity))
+        if qty <= 0:
+            return
+        self.consumable_inventory[consumable_id] = self.consumable_quantity(consumable_id) + qty
+
+    def remove_consumable(self, consumable_id, quantity=1):
+        qty = max(0, int(quantity))
+        current = self.consumable_quantity(consumable_id)
+        if current < qty:
+            return False
+        remaining = current - qty
+        if remaining <= 0:
+            self.consumable_inventory.pop(consumable_id, None)
+        else:
+            self.consumable_inventory[consumable_id] = remaining
+        return True
+
+    def consumable_quantity(self, consumable_id):
+        return int(self.consumable_inventory.get(consumable_id, 0))
+
+    def owned_consumables(self):
+        owned = []
+        for consumable_id, quantity in self.consumable_inventory.items():
+            qty = int(quantity)
+            if qty <= 0:
+                continue
+            template = get_consumable_template(consumable_id, self.shop_consumables)
+            if template:
+                owned.append({"template": template, "quantity": qty, "unknown": False})
+            else:
+                owned.append(
+                    {
+                        "template": {
+                            "id": consumable_id,
+                            "name": "Unknown Item",
+                            "description": "(No longer available)",
+                        },
+                        "quantity": qty,
+                        "unknown": True,
+                    }
+                )
+        owned.sort(key=lambda entry: entry["template"]["name"])
+        return owned
+
+    def can_use_consumables_now(self):
+        if not self.run_started or not self.player.alive():
+            return False
+        if self.awaiting_reward:
+            return False
+        if self.game_over_window is not None and self.game_over_window.winfo_exists():
+            return False
+        return self.in_combat or self.in_preparation
+
+    def can_use_consumable(self, template):
+        if not self.can_use_consumables_now():
+            return False
+        if not get_consumable_template(template.get("id"), self.shop_consumables):
+            return False
+        if self.consumable_quantity(template["id"]) <= 0:
+            return False
+        timing = template.get("timing", "both")
+        if timing == "both":
+            return self.in_combat or (self.in_preparation and not self.in_combat)
+        if timing == "combat":
+            return self.in_combat
+        if timing == "preparation":
+            return self.in_preparation and not self.in_combat
+        return False
+
+    def apply_fight_consumable_bonuses(self):
+        attack, defense, _max_health = self.compute_player_stats()
+        self.player.attack = attack + self._fight_attack_bonus
+        self.player.defense = defense + self._fight_defense_bonus
+
+    def clear_fight_consumable_buffs(self):
+        self._fight_attack_bonus = 0
+        self._fight_defense_bonus = 0
+        self._player_damage_reduction_next = False
+        self._player_damage_reduction_amount = 0
+        self.apply_player_stats()
+
+    def apply_consumable_effect(self, template):
+        effect_type = template["effect_type"]
+        power = int(template.get("power", 0))
+        name = template["name"]
+
+        if effect_type == "heal":
+            heal_amount = min(power, self.player.max_health - self.player.health)
+            self.player.health += heal_amount
+            self.log(f"You use {name} and recover {heal_amount} HP.")
+            return False
+
+        if effect_type == "damage":
+            self.enemy.health = max(0, self.enemy.health - power)
+            self.log(
+                f"You hurl a {name} at {enemy_display_name(self.enemy)} for {power} damage!"
+            )
+            return self.enemy.health <= 0
+
+        if effect_type == "defense_boost":
+            self._fight_defense_bonus += power
+            self.apply_fight_consumable_bonuses()
+            self.log(f"You apply {name} and gain +{power} Defense for this fight.")
+            return False
+
+        if effect_type == "attack_boost":
+            self._fight_attack_bonus += power
+            self.apply_fight_consumable_bonuses()
+            self.log(f"You drink {name} and gain +{power} Attack for this fight.")
+            return False
+
+        if effect_type == "cooldown_reduce":
+            if self.power_strike_cooldown <= 0:
+                self.log(f"You drink {name}, but Power Strike is already ready.")
+            else:
+                self.power_strike_cooldown = max(0, self.power_strike_cooldown - power)
+                self.log(f"You drink {name} and Power Strike cooldown drops by {power}.")
+            return False
+
+        if effect_type == "next_hit_reduction":
+            self._player_damage_reduction_next = True
+            self._player_damage_reduction_amount = power
+            self.log(f"You toss a {name} — the next enemy blow will be softened by {power}.")
+            return False
+
+        return False
+
+    def use_consumable(self, consumable_id):
+        template = get_consumable_template(consumable_id, self.shop_consumables)
+        if not template:
+            return False
+        if not self.can_use_consumable(template):
+            messagebox.showinfo("Use Item", "You cannot use that item right now.")
+            return False
+        if template["effect_type"] == "heal" and self.player.health >= self.player.max_health:
+            messagebox.showinfo("Use Item", "You are already at full health.")
+            return False
+        if not self.remove_consumable(consumable_id, 1):
+            messagebox.showinfo("Use Item", "You do not have that item.")
+            return False
+
+        enemy_killed = self.apply_consumable_effect(template)
+        self.refresh_stats()
+        self.update_use_item_button()
+        if enemy_killed:
+            self.finish_match(victory=True)
+        return True
+
+    def _apply_player_damage_reduction(self, enemy_hits):
+        if not self._player_damage_reduction_next:
+            return enemy_hits, False
+        amount = self._player_damage_reduction_amount or 3
+        reduced = max(1, enemy_hits - amount)
+        self._player_damage_reduction_next = False
+        self._player_damage_reduction_amount = 0
+        return reduced, True
+
+    def _has_combat_usable_consumables(self):
+        if not self.in_combat or not self.player.alive():
+            return False
+        for entry in self.owned_consumables():
+            template = entry["template"]
+            if not get_consumable_template(template.get("id"), self.shop_consumables):
+                continue
+            timing = template.get("timing", "both")
+            if timing not in ("combat", "both"):
+                continue
+            if self.consumable_quantity(template["id"]) <= 0:
+                continue
+            return True
+        return False
+
+    def _has_preparation_usable_consumables(self):
+        if not self.can_visit_town():
+            return False
+        for entry in self.owned_consumables():
+            template = entry["template"]
+            if not get_consumable_template(template.get("id"), self.shop_consumables):
+                continue
+            timing = template.get("timing", "both")
+            if timing not in ("preparation", "both"):
+                continue
+            if self.consumable_quantity(template["id"]) <= 0:
+                continue
+            return True
+        return False
+
+    def _update_arena_use_item_button(self):
+        if not hasattr(self, "use_item_btn"):
+            return
+        has_usable = self._has_combat_usable_consumables()
+        self.use_item_btn.configure(state=tk.NORMAL if has_usable else tk.DISABLED)
+
+    def _update_town_use_item_button(self):
+        if not hasattr(self, "town_use_item_btn"):
+            return
+        has_usable = self._has_preparation_usable_consumables()
+        self.town_use_item_btn.configure(state=tk.NORMAL if has_usable else tk.DISABLED)
+
+    def update_use_item_button(self):
+        self._update_arena_use_item_button()
+        self._update_town_use_item_button()
+
+    def open_use_consumables_dialog(self):
+        if not self.can_use_consumables_now():
+            messagebox.showinfo("Use Item", "You cannot use items right now.")
+            return
+        owned = self.owned_consumables()
+        if not owned:
+            messagebox.showinfo("Use Item", "You have no consumables.")
+            return
+
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Use Item")
+        dialog.geometry("460x360")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        ttk.Label(dialog, text="Consumables", font=("Segoe UI", 12, "bold")).pack(pady=(10, 6))
+
+        list_frame = ttk.Frame(dialog, padding=8)
+        list_frame.pack(fill=tk.BOTH, expand=True, padx=10)
+
+        for entry in owned:
+            template = entry["template"]
+            qty = entry["quantity"]
+            unknown = entry.get("unknown", False)
+            usable = self.can_use_consumable(template)
+            row = ttk.Frame(list_frame)
+            row.pack(fill=tk.X, pady=4)
+            info = ttk.Frame(row)
+            info.pack(side=tk.LEFT, anchor="w", fill=tk.X, expand=True)
+            ttk.Label(
+                info,
+                text=f"{template['name']} x{qty}",
+                font=("Segoe UI", 10, "bold"),
+            ).pack(anchor="w")
+            ttk.Label(info, text=template.get("description", ""), wraplength=300).pack(anchor="w")
+            if unknown:
+                ttk.Label(info, text="(No longer available)", wraplength=300).pack(anchor="w")
+            elif not usable:
+                ttk.Label(info, text="(Not usable right now)", wraplength=300).pack(anchor="w")
+            ttk.Button(
+                row,
+                text="Use",
+                command=lambda cid=template["id"], dlg=dialog: self._use_consumable_from_dialog(cid, dlg),
+                state=tk.NORMAL if usable else tk.DISABLED,
+            ).pack(side=tk.RIGHT, padx=(8, 0))
+
+        ttk.Button(dialog, text="Close", command=dialog.destroy).pack(pady=(0, 10))
+
+    def _use_consumable_from_dialog(self, consumable_id, dialog):
+        dialog.destroy()
+        self.use_consumable(consumable_id)
+
     def format_item_detail(self, item):
         bits = []
         if item.get("attack"):
@@ -1339,6 +2229,54 @@ class BattleApp:
         if item.get("health"):
             bits.append(f"+{item['health']} HP")
         return ", ".join(bits) if bits else "no bonus"
+
+    def _equip_target_slot(self, item):
+        slot = item["slot"]
+        if slot == "ring1":
+            if self.equipment["ring1"] and not self.equipment["ring2"]:
+                return "ring2"
+            if self.equipment["ring1"] and self.equipment["ring2"]:
+                return "ring1"
+        return slot
+
+    def _item_stat_totals(self, item):
+        if not item:
+            return {"attack": 0, "defense": 0, "health": 0}
+        return {
+            "attack": int(item.get("attack", 0)),
+            "defense": int(item.get("defense", 0)),
+            "health": int(item.get("health", 0)),
+        }
+
+    def _format_stat_change_line(self, delta):
+        parts = []
+        for key, label in (("attack", "ATK"), ("defense", "DEF"), ("health", "HP")):
+            change = delta[key]
+            if change > 0:
+                parts.append(f"+{change} {label}")
+            elif change < 0:
+                parts.append(f"{change} {label}")
+        if not parts:
+            return "Change: no stat difference"
+        return "Change: " + ", ".join(parts)
+
+    def _shop_equipped_comparison_text(self, item):
+        slot = self._equip_target_slot(item)
+        equipped = self.equipment.get(slot)
+        slot_label = slot.replace("ring1", "Ring 1").replace("ring2", "Ring 2").title()
+        new_stats = self._item_stat_totals(item)
+        lines = []
+        if item.get("slot") in ("ring1", "ring2"):
+            lines.append(f"Compares to: {slot_label}")
+        if not equipped:
+            lines.append(f"Currently equipped: Empty ({slot_label})")
+            lines.append(self._format_stat_change_line(new_stats) if any(new_stats.values()) else "Change: no stat bonus")
+        else:
+            old_stats = self._item_stat_totals(equipped)
+            delta = {key: new_stats[key] - old_stats[key] for key in new_stats}
+            lines.append(f"Currently equipped: {equipped['name']} — {self.format_item_detail(equipped)}")
+            lines.append(self._format_stat_change_line(delta))
+        return "\n".join(lines)
 
     def equip_item(self, item):
         """Place an item into its slot, replacing anything already worn there."""
@@ -1409,12 +2347,12 @@ class BattleApp:
             if slot < len(self.active_mercenaries):
                 merc = self.active_mercenaries[slot]
                 if merc.fallen:
-                    label = f"{merc.name} ({merc.role}) — FALLEN"
+                    label = f"{merc.name} ({merc.role} · {format_combat_role(merc.combat_role)}) — FALLEN"
                     hp_text = "Fallen — revive at Recruit"
                     action_text = merc.ability_desc
                     bar_max, bar_val = merc.max_health, 0
                 else:
-                    label = f"{merc.name} ({merc.race} {merc.role})"
+                    label = f"{merc.name} ({merc.race} {merc.role} · {format_combat_role(merc.combat_role)})"
                     hp_text = f"HP: {merc.health} / {merc.max_health}  ATK {merc.attack}  DEF {merc.defense}"
                     action_text = f"Last: {merc.last_action}"
                     bar_max, bar_val = merc.max_health, max(0, merc.health)
@@ -1457,8 +2395,9 @@ class BattleApp:
         else:
             for template in self.recruitment_pool:
                 cost = mercenary_hire_cost(template)
+                template_role = format_combat_role(template.get("combat_role", "melee"))
                 detail = (
-                    f"{template['name']} — {template['race']} {template['role']} | "
+                    f"{template['name']} — {template['race']} {template['role']} · {template_role} | "
                     f"ATK {template['attack']} DEF {template['defense']} HP {template['health']} | "
                     f"{template['ability_desc']}"
                 )
@@ -1480,7 +2419,7 @@ class BattleApp:
                 status = "Fallen" if merc.fallen else f"{merc.health}/{merc.max_health} HP"
                 ttk.Label(
                     self.recruit_party_frame,
-                    text=f"{merc.name} ({merc.race} {merc.role}) — {status} — {merc.ability_desc}",
+                    text=f"{merc.name} ({merc.race} {merc.role} · {format_combat_role(merc.combat_role)}) — {status} — {merc.ability_desc}",
                     wraplength=420,
                 ).pack(anchor="w", pady=2)
 
@@ -1550,12 +2489,10 @@ class BattleApp:
 
     def close_recruit(self):
         if self.run_started:
-            self.show_battle_screen()
-            if self.in_preparation and not self.awaiting_reward:
-                self.status_var.set("Ready to engage")
-                self.phase_info_var.set(
-                    "Preparation phase — Shop and Recruit are open. Strike first when you are ready."
-                )
+            if self.can_visit_town():
+                self.show_town_screen()
+            else:
+                self.show_battle_screen()
         else:
             self.show_main_menu()
 
@@ -1590,6 +2527,7 @@ class BattleApp:
             self.log(f"{mercenary.name} fortifies and recovers 3 HP.")
         elif ability == "volley":
             damage = max(2, mercenary.attack - max(0, self.enemy.defense - 2))
+            damage = max(1, damage + role_damage_bonus(mercenary.to_combatant(), self.enemy))
             self.enemy.health -= damage
             mercenary.last_action = f"Volley ({damage} dmg)"
             self.log(f"{mercenary.name} looses a volley for {damage} damage!")
@@ -1624,7 +2562,7 @@ class BattleApp:
             self.log(f"{mercenary.name} raises a shield wall — your next hit is softened.")
             self._player_damage_reduction_next = True
         elif ability == "arc_bolt":
-            damage = 5
+            damage = max(1, 5 + role_damage_bonus(mercenary.to_combatant(), self.enemy))
             self.enemy.health -= damage
             mercenary.last_action = f"Arc Bolt ({damage} dmg)"
             self.log(f"{mercenary.name} casts Arc Bolt for {damage} damage!")
@@ -1653,7 +2591,7 @@ class BattleApp:
                 if random.random() < 0.4:
                     counter = self.compute_damage(self.enemy, mercenary.to_combatant())
                     mercenary.health -= counter
-                    self.log(f"{self.enemy.enemy_type} clips {mercenary.name} for {counter} damage!")
+                    self.log(f"{enemy_display_name(self.enemy)} clips {mercenary.name} for {counter} damage!")
             else:
                 mercenary.last_action = "Block"
                 self.log(f"{mercenary.name} holds position and braces.")
@@ -1683,6 +2621,9 @@ class BattleApp:
             "main_frame",
             "shop_frame",
             "recruit_frame",
+            "town_frame",
+            "dungeons_frame",
+            "fields_frame",
             "admin_frame",
         ):
             frame = getattr(self, frame_name, None)
@@ -1703,6 +2644,7 @@ class BattleApp:
         self.menu_frame.pack(fill=tk.BOTH, expand=True)
         self.update_admin_button_visibility()
         self.update_menu_buttons()
+        self.refresh_menu_high_scores()
 
     def update_save_run_buttons(self):
         """Sync Save Run button state on the menu and battle footer."""
@@ -1712,15 +2654,141 @@ class BattleApp:
             self.save_run_btn.configure(state=state)
         if hasattr(self, "save_run_footer_btn"):
             self.save_run_footer_btn.configure(state=state)
+        if hasattr(self, "town_save_run_btn"):
+            self.town_save_run_btn.configure(state=state)
+
+    def can_visit_town(self):
+        return (
+            self.run_started
+            and self.player.alive()
+            and self.in_preparation
+            and not self.in_combat
+            and not self.awaiting_reward
+        )
+
+    def open_town(self):
+        if not self.can_visit_town():
+            self.log("You cannot visit Town right now.")
+            return
+        self.hide_all_screens()
+        self.town_frame.pack(fill=tk.BOTH, expand=True)
+        self.update_town_buttons()
+
+    def open_arena(self):
+        if not self.run_started:
+            self.show_main_menu()
+            return
+        self.show_battle_screen()
+        if self.in_preparation and not self.awaiting_reward:
+            self.status_var.set("Ready to engage")
+            self.phase_info_var.set("Enter the Arena and strike when you are ready to fight.")
+
+    def show_dungeons_screen(self):
+        self.hide_all_screens()
+        self.dungeons_frame.pack(fill=tk.BOTH, expand=True)
+
+    def open_dungeons(self):
+        if not self.can_visit_town():
+            self.log("You cannot enter the Dungeons right now.")
+            return
+        self.show_dungeons_screen()
+
+    def close_dungeons(self):
+        if self.run_started:
+            self.show_town_screen()
+        else:
+            self.show_main_menu()
+
+    def show_fields_screen(self):
+        self.hide_all_screens()
+        self.fields_frame.pack(fill=tk.BOTH, expand=True)
+        self.refresh_fields_screen()
+
+    def open_fields(self):
+        if not self.can_visit_town():
+            self.log("You cannot enter the Fields right now.")
+            return
+        self.show_fields_screen()
+
+    def close_fields(self):
+        if self.run_started:
+            self.show_town_screen()
+        else:
+            self.show_main_menu()
+
+    def can_search_fields(self):
+        return self.can_visit_town() and self.field_search_used_for_enemy_level != self.enemy_level
+
+    def refresh_fields_screen(self):
+        if not hasattr(self, "fields_search_btn"):
+            return
+        if self.can_search_fields():
+            self.fields_status_var.set("You may search the fields once before each arena challenger level.")
+            self.fields_search_btn.configure(state=tk.NORMAL)
+        else:
+            if not self.can_visit_town():
+                self.fields_status_var.set("Fields are unavailable right now.")
+            else:
+                self.fields_status_var.set(
+                    f"You already searched the fields at enemy level {self.enemy_level}."
+                )
+            self.fields_search_btn.configure(state=tk.DISABLED)
+
+    def search_fields(self):
+        if not self.can_search_fields():
+            messagebox.showinfo("Fields", "You cannot search the fields right now.")
+            return
+        roll = random.random()
+        if roll < 0.30:
+            coin_find = random.randint(4, 8)
+            self.coins += coin_find
+            self.run_summary["total_coins_earned"] += coin_find
+            self.log(f"You search the fields and find {coin_find} coins.")
+        elif roll < 0.55:
+            consumable_id = random.choice(["field_salve", "minor_health_potion"])
+            template = get_consumable_template(consumable_id, self.shop_consumables)
+            name = template["name"] if template else consumable_id
+            self.add_consumable(consumable_id, 1)
+            self.log(f"You search the fields and find a {name}.")
+        elif roll < 0.75:
+            heal_amount = min(random.randint(3, 6), self.player.max_health - self.player.health)
+            if heal_amount > 0:
+                self.player.health += heal_amount
+                self.log(f"You search the fields and recover {heal_amount} HP.")
+            else:
+                self.log("You search the fields but are already at full health.")
+        else:
+            self.log("You search the fields but find nothing useful.")
+        self.field_search_used_for_enemy_level = self.enemy_level
+        self.refresh_stats()
+        self.refresh_fields_screen()
+        self.update_use_item_button()
+
+    def update_town_button(self):
+        if not hasattr(self, "town_btn"):
+            return
+        self.town_btn.configure(state=tk.NORMAL if self.can_visit_town() else tk.DISABLED)
+
+    def update_town_buttons(self):
+        self.update_town_button()
+        self.update_save_run_buttons()
+        if not hasattr(self, "town_character_btn"):
+            return
+        ready = self.can_visit_town()
+        service_state = tk.NORMAL if ready else tk.DISABLED
+        self.town_character_btn.configure(state=service_state)
+        self.town_shop_btn.configure(state=service_state)
+        self.town_recruit_btn.configure(state=service_state)
+        self._update_town_use_item_button()
 
     def update_menu_buttons(self):
         if hasattr(self, "save_build_btn"):
             self.save_build_btn.configure(state=tk.NORMAL if self.build_active else tk.DISABLED)
         self.update_save_run_buttons()
+        if hasattr(self, "load_build_btn"):
+            self.load_build_btn.configure(state=tk.NORMAL if self.any_build_slot_exists() else tk.DISABLED)
         if hasattr(self, "load_run_btn"):
-            self.load_run_btn.configure(
-                state=tk.NORMAL if os.path.exists(self.run_save_path) else tk.DISABLED
-            )
+            self.load_run_btn.configure(state=tk.NORMAL if self.any_run_slot_exists() else tk.DISABLED)
         if self.run_started and self.player.alive():
             self.menu_status_var.set("Run in progress. Load Run to resume, or start a New Build.")
         elif self.build_active:
@@ -1736,6 +2804,19 @@ class BattleApp:
         self.hide_all_screens()
         self.main_frame.pack(fill=tk.BOTH, expand=True)
 
+    def show_town_screen(self):
+        self.hide_all_screens()
+        self.town_frame.pack(fill=tk.BOTH, expand=True)
+        self.update_town_buttons()
+
+    def show_screen_for_current_phase(self):
+        if self.in_combat or self.awaiting_reward:
+            self.show_battle_screen()
+        elif self.can_visit_town():
+            self.show_town_screen()
+        else:
+            self.show_battle_screen()
+
     def close_auxiliary_windows(self):
         for attr in ("character_window", "game_over_window"):
             window = getattr(self, attr, None)
@@ -1743,13 +2824,18 @@ class BattleApp:
                 window.destroy()
             setattr(self, attr, None)
 
-    def return_to_main_menu(self):
+    def _prompt_save_run_before_leave(self, title, prompt):
         if self.run_started and self.player.alive():
-            choice = messagebox.askyesnocancel("Main Menu", "Save Run before leaving?")
+            choice = messagebox.askyesnocancel(title, prompt)
             if choice is None:
-                return
-            if choice and not self.save_run_to_file(show_message=True):
-                return
+                return False
+            if choice and not self.save_run_menu(show_message=True):
+                return False
+        return True
+
+    def return_to_main_menu(self):
+        if not self._prompt_save_run_before_leave("Main Menu", "Save Run before leaving?"):
+            return
         self._finish_return_to_main_menu()
 
     def _finish_return_to_main_menu(self):
@@ -1767,12 +2853,195 @@ class BattleApp:
         self.creation_defense_points = 0
         self.creation_health_points = 0
         self.selected_race = "Human"
+        self.selected_difficulty = DEFAULT_DIFFICULTY
+        self.selected_combat_role = DEFAULT_COMBAT_ROLE
         if hasattr(self, "race_var"):
             self.race_var.set(self.selected_race)
+        if hasattr(self, "difficulty_var"):
+            self.difficulty_var.set(self.selected_difficulty)
+        if hasattr(self, "combat_role_var"):
+            self.combat_role_var.set(format_combat_role(self.selected_combat_role))
         self.show_character_creation_screen()
 
     def quit_game(self):
+        if not self._prompt_save_run_before_leave("Quit", "Save Run before quitting?"):
+            return
         self.root.destroy()
+
+    def _game_dir(self):
+        return os.path.dirname(__file__)
+
+    def build_slot_path(self, slot):
+        return os.path.join(self._game_dir(), f"saved_build_slot{slot}.json")
+
+    def run_slot_path(self, slot):
+        return os.path.join(self._game_dir(), f"player_run_slot{slot}.json")
+
+    def resolve_build_load_path(self, slot):
+        path = self.build_slot_path(slot)
+        if os.path.exists(path):
+            return path
+        if slot == 1:
+            if os.path.exists(self.build_save_path):
+                return self.build_save_path
+            if os.path.exists(self.save_path):
+                return self.save_path
+        return None
+
+    def resolve_run_load_path(self, slot):
+        path = self.run_slot_path(slot)
+        if os.path.exists(path):
+            return path
+        if slot == 1 and os.path.exists(self.run_save_path):
+            return self.run_save_path
+        return None
+
+    def build_slot_exists(self, slot):
+        return self.resolve_build_load_path(slot) is not None
+
+    def run_slot_exists(self, slot):
+        return self.resolve_run_load_path(slot) is not None
+
+    def any_build_slot_exists(self):
+        return any(self.build_slot_exists(slot) for slot in range(1, BUILD_SLOT_COUNT + 1))
+
+    def any_run_slot_exists(self):
+        return any(self.run_slot_exists(slot) for slot in range(1, RUN_SLOT_COUNT + 1))
+
+    def describe_build_slot(self, slot):
+        path = self.resolve_build_load_path(slot)
+        if not path:
+            return "Empty"
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                data = json.load(handle)
+        except (OSError, json.JSONDecodeError):
+            return "Corrupt save"
+        if not isinstance(data, dict):
+            return "Corrupt save"
+        race = data.get("race", "Human")
+        attack = data.get("attack", "?")
+        defense = data.get("defense", "?")
+        health = data.get("health", "?")
+        role = format_combat_role(normalize_combat_role(data.get("combat_role", DEFAULT_COMBAT_ROLE)))
+        difficulty = data.get("difficulty", DEFAULT_DIFFICULTY)
+        if difficulty not in DIFFICULTIES:
+            difficulty = DEFAULT_DIFFICULTY
+        return f"{race}, {attack}/{defense}/{health}, {role}, {difficulty}"
+
+    def describe_run_slot(self, slot):
+        path = self.resolve_run_load_path(slot)
+        if not path:
+            return "Empty"
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                data = json.load(handle)
+        except (OSError, json.JSONDecodeError):
+            return "Corrupt save"
+        if not isinstance(data, dict):
+            return "Corrupt save"
+        build = data.get("build")
+        if not isinstance(build, dict):
+            return "Corrupt save"
+        run = data.get("run")
+        if not isinstance(run, dict):
+            return "Corrupt save"
+        try:
+            race = build.get("race", "Human")
+            level = run.get("player_level", "?")
+            run_summary = run.get("run_summary")
+            if not isinstance(run_summary, dict):
+                run_summary = {}
+            defeated = run_summary.get("enemies_defeated", 0)
+            if run.get("in_combat"):
+                phase = "mid-fight"
+            elif run.get("awaiting_reward"):
+                phase = "reward pending"
+            else:
+                phase = "preparation"
+            enemy = run.get("enemy")
+            if isinstance(enemy, dict) and enemy.get("is_boss"):
+                phase = f"{phase}, BOSS"
+            return f"L{level} {race}, {defeated} foes, {phase}"
+        except (AttributeError, TypeError, ValueError):
+            return "Corrupt save"
+
+    def _prompt_slot_picker(self, title, kind, mode):
+        """kind: 'build' or 'run'; mode: 'save' or 'load'. Returns slot 1-3 or None."""
+        slot_count = BUILD_SLOT_COUNT if kind == "build" else RUN_SLOT_COUNT
+        describe = self.describe_build_slot if kind == "build" else self.describe_run_slot
+        exists_fn = self.build_slot_exists if kind == "build" else self.run_slot_exists
+
+        dialog = tk.Toplevel(self.root)
+        dialog.title(title)
+        dialog.geometry("420x260")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        ttk.Label(dialog, text=title, font=("Segoe UI", 12, "bold")).pack(pady=(12, 6))
+        ttk.Label(dialog, text="Choose a slot:").pack(pady=(0, 8))
+
+        result = {"slot": None}
+
+        def choose(slot):
+            summary = describe(slot)
+            if mode == "load":
+                if not exists_fn(slot):
+                    messagebox.showinfo("Empty Slot", f"Slot {slot} is empty.", parent=dialog)
+                    return
+            elif exists_fn(slot):
+                if not messagebox.askyesno(
+                    "Overwrite Save?",
+                    f"Slot {slot} already has a save:\n{summary}\n\nOverwrite it?",
+                    parent=dialog,
+                ):
+                    return
+            result["slot"] = slot
+            dialog.destroy()
+
+        for slot in range(1, slot_count + 1):
+            summary = describe(slot)
+            occupied = exists_fn(slot)
+            if mode == "load" and not occupied:
+                ttk.Button(
+                    dialog,
+                    text=f"Slot {slot} — Empty",
+                    state=tk.DISABLED,
+                ).pack(fill=tk.X, padx=24, pady=3)
+            else:
+                label = f"Slot {slot} — {summary}"
+                ttk.Button(dialog, text=label, command=lambda s=slot: choose(s)).pack(fill=tk.X, padx=24, pady=3)
+
+        ttk.Button(dialog, text="Cancel", command=dialog.destroy).pack(pady=(10, 12))
+        dialog.wait_window()
+        return result["slot"]
+
+    def save_build_menu(self, show_message=True):
+        slot = self._prompt_slot_picker("Save Build", "build", "save")
+        if not slot:
+            return False
+        return self.save_build_to_file(slot, show_message=show_message)
+
+    def load_build_menu(self):
+        if not self.any_build_slot_exists():
+            messagebox.showinfo("No Build Found", "No saved build was found yet.")
+            return
+        slot = self._prompt_slot_picker("Load Build", "build", "load")
+        if slot:
+            self.load_build_from_file(slot)
+
+    def save_run_menu(self, show_message=True):
+        slot = self._prompt_slot_picker("Save Run", "run", "save")
+        if not slot:
+            return False
+        return self.save_run_to_file(slot, show_message=show_message)
+
+    def load_run_menu(self):
+        if not self.any_run_slot_exists():
+            messagebox.showinfo("No Run Found", "No saved run was found yet.")
+            return
+        slot = self._prompt_slot_picker("Load Run", "run", "load")
+        if slot:
+            self.load_run_from_file(slot)
 
     def build_build_save_data(self):
         """Full character build: race, point allocation, and current equipment."""
@@ -1782,36 +3051,30 @@ class BattleApp:
             "attack": self.creation_attack_points,
             "defense": self.creation_defense_points,
             "health": self.creation_health_points,
+            "difficulty": self.selected_difficulty,
+            "combat_role": self.selected_combat_role,
             "equipment": {slot: (dict(item) if item else None) for slot, item in self.equipment.items()},
         }
 
-    def save_build_to_file(self, show_message=True):
+    def save_build_to_file(self, slot, show_message=True):
         if not self.build_active:
             if show_message:
                 messagebox.showinfo("Save Build", "Create or load a build before saving.")
             return False
+        if slot < 1 or slot > BUILD_SLOT_COUNT:
+            return False
         data = self.build_build_save_data()
+        path = self.build_slot_path(slot)
         try:
-            with open(self.build_save_path, "w", encoding="utf-8") as handle:
+            with open(path, "w", encoding="utf-8") as handle:
                 json.dump(data, handle, indent=2)
-            # Legacy simple file for backward compatibility.
-            with open(self.save_path, "w", encoding="utf-8") as handle:
-                json.dump(
-                    {
-                        "race": data["race"],
-                        "attack": data["attack"],
-                        "defense": data["defense"],
-                        "health": data["health"],
-                    },
-                    handle,
-                    indent=2,
-                )
         except OSError as exc:
             if show_message:
                 messagebox.showerror("Save Build", f"Could not save build:\n{exc}")
             return False
+        self.update_menu_buttons()
         if show_message:
-            messagebox.showinfo("Build Saved", f"Build saved to {os.path.basename(self.build_save_path)}.")
+            messagebox.showinfo("Build Saved", f"Build saved to slot {slot} ({os.path.basename(path)}).")
         return True
 
     def mercenary_to_dict(self, mercenary):
@@ -1847,9 +3110,21 @@ class BattleApp:
             "flavor": self.enemy.flavor,
             "ai_style": self.enemy.ai_style,
             "enemy_type": self.enemy.enemy_type,
+            "combat_role": self.enemy.combat_role,
+            "is_boss": self.enemy.is_boss,
+            "boss_name": self.enemy.boss_name,
         }
 
     def enemy_from_dict(self, data):
+        combat_role = data.get("combat_role")
+        if combat_role not in COMBAT_ROLES:
+            enemy_type = data.get("enemy_type", "")
+            combat_role = "melee"
+            for theme in self.enemy_themes:
+                if theme["name"] == enemy_type:
+                    theme_role = theme.get("combat_role", "melee")
+                    combat_role = theme_role if theme_role in COMBAT_ROLES else "melee"
+                    break
         enemy = Combatant(
             data["name"],
             data["attack"],
@@ -1859,6 +3134,9 @@ class BattleApp:
             flavor=data.get("flavor", ""),
             ai_style=data.get("ai_style", "balanced"),
             enemy_type=data.get("enemy_type", ""),
+            combat_role=combat_role,
+            is_boss=bool(data.get("is_boss", False)),
+            boss_name=str(data.get("boss_name", "")) if data.get("is_boss", False) else "",
         )
         enemy.health = data["health"]
         return enemy
@@ -1871,6 +3149,8 @@ class BattleApp:
                 "attack": self.creation_attack_points,
                 "defense": self.creation_defense_points,
                 "health": self.creation_health_points,
+                "difficulty": self.selected_difficulty,
+                "combat_role": self.selected_combat_role,
             },
             "run": {
                 "player_level": self.player_level,
@@ -1883,21 +3163,35 @@ class BattleApp:
                 "player_health": self.player.health,
                 "equipment": {slot: (dict(item) if item else None) for slot, item in self.equipment.items()},
                 "inventory": [dict(item) for item in self.inventory],
+                "consumable_inventory": dict(self.consumable_inventory),
+                "_fight_attack_bonus": self._fight_attack_bonus,
+                "_fight_defense_bonus": self._fight_defense_bonus,
+                "_player_damage_reduction_amount": self._player_damage_reduction_amount,
                 "active_mercenaries": [self.mercenary_to_dict(m) for m in self.active_mercenaries],
                 "fallen_mercenaries": [self.mercenary_to_dict(m) for m in self.fallen_mercenaries],
                 "recruitment_pool": [t["id"] for t in self.recruitment_pool],
                 "enemy": self.enemy_to_dict(),
                 "awaiting_reward": self.awaiting_reward,
+                "in_combat": self.in_combat,
+                "in_preparation": self.in_preparation,
+                "awaiting_first_strike": self.awaiting_first_strike,
+                "pending_reward_options": reward_options_to_json(self.pending_reward_options),
+                "player_damage_reduction_next": self._player_damage_reduction_next,
+                "run_summary": dict(self.run_summary),
+                "field_search_used_for_enemy_level": self.field_search_used_for_enemy_level,
             },
         }
 
-    def save_run_to_file(self, show_message=True):
+    def save_run_to_file(self, slot, show_message=True):
         if not self.run_started or not self.player.alive():
             if show_message:
                 messagebox.showinfo("Save Run", "Start a run and survive before saving progress.")
             return False
+        if slot < 1 or slot > RUN_SLOT_COUNT:
+            return False
+        path = self.run_slot_path(slot)
         try:
-            with open(self.run_save_path, "w", encoding="utf-8") as handle:
+            with open(path, "w", encoding="utf-8") as handle:
                 json.dump(self.build_run_save_data(), handle, indent=2)
         except OSError as exc:
             if show_message:
@@ -1905,16 +3199,23 @@ class BattleApp:
             return False
         self.update_menu_buttons()
         if show_message:
-            messagebox.showinfo("Run Saved", f"Run saved to {os.path.basename(self.run_save_path)}.")
+            messagebox.showinfo("Run Saved", f"Run saved to slot {slot} ({os.path.basename(path)}).")
         return True
 
     def apply_run_save_data(self, data):
+        save_version = int(data.get("version", 1))
         build = data.get("build", {})
         run = data.get("run", {})
+        has_phase_fields = save_version >= 2 or any(
+            key in run for key in ("in_combat", "in_preparation", "awaiting_first_strike")
+        )
         race = build.get("race", "Human")
         if race not in RACES:
             race = "Human"
         self.selected_race = race
+        difficulty = build.get("difficulty", DEFAULT_DIFFICULTY)
+        self.selected_difficulty = difficulty if difficulty in DIFFICULTIES else DEFAULT_DIFFICULTY
+        self.selected_combat_role = normalize_combat_role(build.get("combat_role", DEFAULT_COMBAT_ROLE))
         self.creation_attack_points = int(build.get("attack", 0))
         self.creation_defense_points = int(build.get("defense", 0))
         self.creation_health_points = int(build.get("health", 0))
@@ -1930,16 +3231,44 @@ class BattleApp:
             if slot in self.equipment and item:
                 self.equipment[slot] = dict(item)
         self.inventory = [dict(item) for item in run.get("inventory", [])]
+        self.consumable_inventory = {}
+        raw_consumables = run.get("consumable_inventory", {})
+        if isinstance(raw_consumables, dict):
+            for key, value in raw_consumables.items():
+                qty = int(value)
+                if qty > 0:
+                    self.consumable_inventory[str(key)] = qty
+        self._fight_attack_bonus = int(run.get("_fight_attack_bonus", 0))
+        self._fight_defense_bonus = int(run.get("_fight_defense_bonus", 0))
+        self._player_damage_reduction_amount = int(run.get("_player_damage_reduction_amount", 0))
         self.player = Combatant(f"{self.selected_race} Warrior", BASE_ATTACK, BASE_DEFENSE, BASE_HEALTH)
         self.apply_player_stats()
-        self.player.health = int(run.get("player_health", self.player.max_health))
+        self.player.health = max(1, min(int(run.get("player_health", self.player.max_health)), self.player.max_health))
         self.player_level = int(run.get("player_level", 1))
         self.player_xp = int(run.get("player_xp", 0))
         self.coins = int(run.get("coins", 10))
         self.enemy_level = int(run.get("enemy_level", 1))
+        self.field_search_used_for_enemy_level = int(run.get("field_search_used_for_enemy_level", -1))
         self.power_strike_cooldown = int(run.get("power_strike_cooldown", 0))
         self.next_enemy_wounded = bool(run.get("next_enemy_wounded", False))
         self.awaiting_reward = bool(run.get("awaiting_reward", False))
+        self.in_combat = bool(run.get("in_combat", False))
+        self.in_preparation = bool(run.get("in_preparation", not self.in_combat))
+        self.awaiting_first_strike = bool(run.get("awaiting_first_strike", False))
+        self._player_damage_reduction_next = bool(run.get("player_damage_reduction_next", False))
+        self.pending_reward_options = reward_options_from_json(run.get("pending_reward_options"))
+        if self.in_combat:
+            self.awaiting_reward = False
+            self.awaiting_first_strike = False
+            self.in_preparation = False
+        elif self.awaiting_reward:
+            self.in_combat = False
+            self.awaiting_first_strike = False
+            self.in_preparation = True
+        elif not has_phase_fields:
+            self.in_combat = False
+            self.in_preparation = True
+            self.awaiting_first_strike = True
         self.enemy = self.enemy_from_dict(run["enemy"])
         self.active_mercenaries = []
         for merc_data in run.get("active_mercenaries", []):
@@ -1957,52 +3286,118 @@ class BattleApp:
             for template_id in pool_ids
             if get_mercenary_template(template_id, self.mercenary_templates)
         ]
-        self.in_combat = False
-        self.in_preparation = False
-        self.awaiting_first_strike = False
-        self._player_damage_reduction_next = False
+        saved_summary = run.get("run_summary", {})
+        self.run_summary = {
+            "enemies_defeated": int(saved_summary.get("enemies_defeated", 0)),
+            "highest_enemy_level_reached": int(saved_summary.get("highest_enemy_level_reached", 0)),
+            "total_coins_earned": int(saved_summary.get("total_coins_earned", 0)),
+            "total_xp_earned": int(saved_summary.get("total_xp_earned", 0)),
+            "final_player_level": int(saved_summary.get("final_player_level", self.player_level)),
+            "final_race": saved_summary.get("final_race", self.selected_race),
+            "cause_of_defeat": saved_summary.get("cause_of_defeat", ""),
+        }
         self.cancel_scheduled_fight()
 
-    def load_run_from_file(self):
-        if not os.path.exists(self.run_save_path):
-            messagebox.showinfo("No Run Found", "No saved run was found yet.")
+    def restore_run_phase_after_load(self):
+        self.cancel_scheduled_fight()
+        self.main_menu_btn.configure(state=tk.NORMAL)
+        self.update_save_run_buttons()
+        self.update_town_button()
+
+        if self.in_combat:
+            self.set_action_buttons_for_phase()
+            self.status_var.set(f"Duel underway against {enemy_display_name(self.enemy)}.")
+            self.phase_info_var.set("Mercenaries act automatically after your move each turn.")
+            self.refresh_stats()
+        elif self.awaiting_reward:
+            self.enter_preparation_phase()
+            self.log("Choose your victory reward before preparing for the next duel.")
+            options = self.pending_reward_options
+            if not options:
+                options = self.build_reward_options()
+            self.show_victory_reward_dialog(options)
+        else:
+            self.enter_preparation_phase()
+            self.refresh_stats()
+        self.show_screen_for_current_phase()
+
+    def load_run_from_file(self, slot):
+        path = self.resolve_run_load_path(slot)
+        if not path:
+            messagebox.showinfo("No Run Found", f"Slot {slot} is empty.")
             return
-        with open(self.run_save_path, "r", encoding="utf-8") as handle:
-            data = json.load(handle)
-        if data.get("version") != RUN_SAVE_VERSION:
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                data = json.load(handle)
+        except OSError as exc:
+            messagebox.showerror("Load Run", f"Could not read the save file:\n{exc}")
+            return
+        except json.JSONDecodeError as exc:
+            messagebox.showerror("Load Run", f"The saved run file is corrupt or malformed:\n{exc}")
+            return
+        if not isinstance(data, dict):
+            messagebox.showerror("Load Run", "The saved run file is corrupt or malformed.")
+            return
+        if data.get("version") not in (1, RUN_SAVE_VERSION):
             messagebox.showinfo("Load Run", "This save file is from an incompatible version.")
             return
         build = data.get("build", {})
-        total = int(build.get("attack", 0)) + int(build.get("defense", 0)) + int(build.get("health", 0))
+        if not isinstance(build, dict):
+            messagebox.showerror("Load Run", "The saved run file is missing a valid build section.")
+            return
+        try:
+            total = int(build.get("attack", 0)) + int(build.get("defense", 0)) + int(build.get("health", 0))
+        except (TypeError, ValueError):
+            messagebox.showerror("Load Run", "The saved run has a malformed build.")
+            return
         if total != 15:
             messagebox.showinfo("Load Run", "The saved run has an invalid build.")
             return
-        self.apply_run_save_data(data)
+        run = data.get("run")
+        if not isinstance(run, dict) or "enemy" not in run:
+            messagebox.showerror("Load Run", "The saved run file is missing required run data.")
+            return
+        try:
+            self.apply_run_save_data(data)
+        except (KeyError, TypeError, ValueError) as exc:
+            messagebox.showerror("Load Run", f"The saved run file is corrupt or malformed:\n{exc}")
+            return
         self.run_started = True
         self.update_menu_buttons()
-        self.show_battle_screen()
         self.log_box.configure(state=tk.NORMAL)
         self.log_box.delete(1.0, tk.END)
         self.log_box.configure(state=tk.DISABLED)
-        self.log("Saved run loaded. You return to the arena.")
-        if self.awaiting_reward:
-            self.enter_preparation_phase()
-            self.log("Choose your victory reward before preparing for the next duel.")
-            self.show_victory_reward_dialog(self.build_reward_options())
+        self.restore_run_phase_after_load()
+        if self.can_visit_town():
+            self.log("Saved run loaded. You return to Town.")
         else:
-            self.enter_preparation_phase(announce_opponent=True)
-        messagebox.showinfo("Run Loaded", f"Run loaded from {os.path.basename(self.run_save_path)}.")
+            self.log("Saved run loaded. You return to the Arena.")
+        messagebox.showinfo("Run Loaded", f"Run loaded from slot {slot} ({os.path.basename(path)}).")
 
-    def load_build_from_file(self):
-        path = self.build_save_path if os.path.exists(self.build_save_path) else self.save_path
-        if not os.path.exists(path):
-            messagebox.showinfo("No Build Found", "No saved build was found yet.")
+    def load_build_from_file(self, slot):
+        path = self.resolve_build_load_path(slot)
+        if not path:
+            messagebox.showinfo("No Build Found", f"Slot {slot} is empty.")
             return
-        with open(path, "r", encoding="utf-8") as handle:
-            data = json.load(handle)
-        attack = int(data.get("attack", 0))
-        defense = int(data.get("defense", 0))
-        health = int(data.get("health", 0))
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                data = json.load(handle)
+        except OSError as exc:
+            messagebox.showerror("Load Build", f"Could not read the build file:\n{exc}")
+            return
+        except json.JSONDecodeError as exc:
+            messagebox.showerror("Load Build", f"The saved build file is corrupt or malformed:\n{exc}")
+            return
+        if not isinstance(data, dict):
+            messagebox.showerror("Load Build", "The saved build file is corrupt or malformed.")
+            return
+        try:
+            attack = int(data.get("attack", 0))
+            defense = int(data.get("defense", 0))
+            health = int(data.get("health", 0))
+        except (TypeError, ValueError):
+            messagebox.showerror("Load Build", "The saved build file has malformed stat values.")
+            return
         race = data.get("race", "Human")
         if race not in RACES:
             race = "Human"
@@ -2011,15 +3406,30 @@ class BattleApp:
             messagebox.showinfo("Build Error", "The saved build is invalid; it must use 15 total points.")
             return
         self.selected_race = race
+        difficulty = data.get("difficulty", DEFAULT_DIFFICULTY)
+        self.selected_difficulty = difficulty if difficulty in DIFFICULTIES else DEFAULT_DIFFICULTY
+        if hasattr(self, "difficulty_var"):
+            self.difficulty_var.set(self.selected_difficulty)
+        self.selected_combat_role = normalize_combat_role(data.get("combat_role", DEFAULT_COMBAT_ROLE))
+        if hasattr(self, "combat_role_var"):
+            self.combat_role_var.set(format_combat_role(self.selected_combat_role))
         self.creation_attack_points = attack
         self.creation_defense_points = defense
         self.creation_health_points = health
         self.creation_points_left = 0
         self.saved_equipment_from_build = None
         if data.get("version") == BUILD_SAVE_VERSION and "equipment" in data:
-            self.saved_equipment_from_build = {
-                slot: (dict(item) if item else None) for slot, item in data["equipment"].items()
-            }
+            equipment = data.get("equipment")
+            if not isinstance(equipment, dict):
+                messagebox.showerror("Load Build", "The saved build file has malformed equipment data.")
+                return
+            try:
+                self.saved_equipment_from_build = {
+                    slot: (dict(item) if item else None) for slot, item in equipment.items()
+                }
+            except (TypeError, ValueError):
+                messagebox.showerror("Load Build", "The saved build file has malformed equipment data.")
+                return
         self.build_active = True
         self.update_menu_buttons()
         self.confirm_character_creation()
@@ -2032,6 +3442,19 @@ class BattleApp:
     def on_race_changed(self, _event=None):
         self.selected_race = self.race_var.get()
         self.update_creation_screen()
+
+    def on_difficulty_changed(self, _event=None):
+        self.selected_difficulty = self.difficulty_var.get()
+        if self.selected_difficulty not in DIFFICULTIES:
+            self.selected_difficulty = DEFAULT_DIFFICULTY
+        self.update_creation_screen()
+
+    def on_combat_role_changed(self, _event=None):
+        self.selected_combat_role = normalize_combat_role(self.combat_role_var.get())
+        self.update_creation_screen()
+
+    def get_difficulty_mods(self):
+        return DIFFICULTIES.get(self.selected_difficulty, DIFFICULTIES[DEFAULT_DIFFICULTY])
 
     def adjust_creation_stat(self, stat, delta):
         if delta > 0 and self.creation_points_left <= 0:
@@ -2060,11 +3483,23 @@ class BattleApp:
     def update_creation_screen(self):
         if hasattr(self, "race_var"):
             self.selected_race = self.race_var.get()
+        if hasattr(self, "difficulty_var"):
+            self.selected_difficulty = self.difficulty_var.get()
+            if self.selected_difficulty not in DIFFICULTIES:
+                self.selected_difficulty = DEFAULT_DIFFICULTY
+                self.difficulty_var.set(self.selected_difficulty)
         self.creation_points_var.set(f"Points left: {self.creation_points_left}")
         self.attack_points_var.set(str(self.creation_attack_points))
         self.defense_points_var.set(str(self.creation_defense_points))
         self.health_points_var.set(str(self.creation_health_points))
         self.race_desc_var.set(RACES[self.selected_race]["desc"])
+        if hasattr(self, "difficulty_desc_var"):
+            self.difficulty_desc_var.set(DIFFICULTIES[self.selected_difficulty]["desc"])
+        if hasattr(self, "combat_role_var"):
+            self.selected_combat_role = normalize_combat_role(self.combat_role_var.get())
+            self.combat_role_var.set(format_combat_role(self.selected_combat_role))
+        if hasattr(self, "combat_role_desc_var"):
+            self.combat_role_desc_var.set(COMBAT_ROLE_DESCS[self.selected_combat_role])
         attack, defense, health = self.compute_preview_stats()
         self.preview_attack_var.set(f"Attack: {attack}")
         self.preview_defense_var.set(f"Defense: {defense}")
@@ -2074,25 +3509,50 @@ class BattleApp:
         if self.creation_points_left != 0:
             messagebox.showinfo("Build Incomplete", "Spend all 15 points before starting your run.")
             return
+        if hasattr(self, "difficulty_var"):
+            self.selected_difficulty = self.difficulty_var.get()
+            if self.selected_difficulty not in DIFFICULTIES:
+                self.selected_difficulty = DEFAULT_DIFFICULTY
+        if hasattr(self, "combat_role_var"):
+            self.selected_combat_role = normalize_combat_role(self.combat_role_var.get())
 
         self.reset_run_state()
         self.run_started = True
         self.build_active = True
         self.update_menu_buttons()
-        self.show_battle_screen()
         self.log_box.configure(state=tk.NORMAL)
         self.log_box.delete(1.0, tk.END)
         self.log_box.configure(state=tk.DISABLED)
-        self.log(f"A new run begins as a {self.selected_race} warrior.")
-        self.log("Your chosen build is ready. The arena calls your name.")
-        self.log("Take your time in preparation — Shop and Recruit are open before each duel.")
-        self.log("Combat begins when you choose your first move.")
+        role_label = format_combat_role(self.selected_combat_role)
+        self.log(
+            f"A new run begins as a {self.selected_race} {role_label} warrior on {self.selected_difficulty} difficulty."
+        )
+        self.log("Your chosen build is ready. Town is your hub.")
+        self.log("Use Town services, then enter the Arena when you are ready to fight.")
         self.enter_preparation_phase(first_fight=True, announce_opponent=True)
+        self.show_town_screen()
+
+    def init_run_summary(self):
+        self.run_summary = {
+            "enemies_defeated": 0,
+            "highest_enemy_level_reached": 0,
+            "total_coins_earned": 0,
+            "total_xp_earned": 0,
+            "final_player_level": 1,
+            "final_race": self.selected_race,
+            "cause_of_defeat": "",
+        }
 
     def reset_run_state(self):
         """Reset a run to the player's saved build allocation, race, and starting equipment."""
+        self.init_run_summary()
         self.stat_bonuses = {"attack": 0, "defense": 0, "health": 0}
         self.inventory = []
+        self.consumable_inventory = {}
+        self.field_search_used_for_enemy_level = -1
+        self._fight_attack_bonus = 0
+        self._fight_defense_bonus = 0
+        self._player_damage_reduction_amount = 0
         self.init_starting_equipment()
         self.player = Combatant(f"{self.selected_race} Warrior", BASE_ATTACK, BASE_DEFENSE, BASE_HEALTH)
         self.apply_player_stats()
@@ -2109,6 +3569,9 @@ class BattleApp:
         self.next_enemy_wounded = False
         self.awaiting_reward = False
         self._player_damage_reduction_next = False
+        self._player_damage_reduction_amount = 0
+        self._fight_attack_bonus = 0
+        self._fight_defense_bonus = 0
         self.cancel_scheduled_fight()
         self.clear_mercenary_state()
         self.refresh_recruitment_pool()
@@ -2166,7 +3629,7 @@ class BattleApp:
             text=f"Reset Stats ({RESET_STAT_COST} coins)",
             command=self.open_reset_stats_dialog,
         ).pack(side=tk.LEFT, padx=4)
-        ttk.Button(actions, text="Save Build", command=self.save_build_to_file).pack(side=tk.LEFT, padx=4)
+        ttk.Button(actions, text="Save Build", command=self.save_build_menu).pack(side=tk.LEFT, padx=4)
         ttk.Button(actions, text="Close", command=self.character_window.destroy).pack(side=tk.RIGHT, padx=4)
         self.refresh_character_panel()
 
@@ -2182,6 +3645,7 @@ class BattleApp:
             f"Race: {self.selected_race} — {race['desc']}\n\n"
             f"Point Allocation: {self.creation_attack_points} ATK / "
             f"{self.creation_defense_points} DEF / {self.creation_health_points} HP\n"
+            f"Combat Role: {format_combat_role(self.selected_combat_role)}\n"
             f"Run Level: {self.player_level}  |  XP: {self.player_xp} / {self.player_level * 10}  |  "
             f"Coins: {self.coins}\n\n"
             f"Base (race + points): {base_atk} ATK / {base_def} DEF / {base_hp} HP\n"
@@ -2212,14 +3676,14 @@ class BattleApp:
             for merc in self.active_mercenaries:
                 status = "Fallen" if merc.fallen else f"{merc.health}/{merc.max_health} HP"
                 merc_lines.append(
-                    f"• {merc.name} ({merc.race} {merc.role}) — {status}\n  {merc.ability_desc}"
+                    f"• {merc.name} ({merc.race} {merc.role} · {format_combat_role(merc.combat_role)}) — {status}\n  {merc.ability_desc}"
                 )
         else:
             merc_lines.append("No active mercenaries. Hire allies at Recruit between fights.")
         if self.fallen_mercenaries:
             merc_lines.append("\nFallen (revivable):")
             for merc in self.fallen_mercenaries:
-                merc_lines.append(f"• {merc.name} ({merc.role})")
+                merc_lines.append(f"• {merc.name} ({merc.role} · {format_combat_role(merc.combat_role)})")
         self.char_merc_var.set("\n".join(merc_lines))
         self.refresh_character_inventory()
 
@@ -2264,6 +3728,8 @@ class BattleApp:
         self.swing_btn.configure(state=state)
         self.block_btn.configure(state=state)
         self.update_power_strike_button()
+        self.update_use_item_button()
+        self.update_town_button()
 
     def update_power_strike_button(self):
         can_act = self.in_combat or self.awaiting_first_strike
@@ -2278,37 +3744,32 @@ class BattleApp:
             self.progress_cooldown_var.set("Power Strike: ready")
 
     def enter_preparation_phase(self, first_fight=False, announce_opponent=False):
-        """Pre-battle phase: Shop and Recruit freely; combat starts on first strike."""
+        """Pre-battle phase: Town services open; combat starts on first strike."""
         self.cancel_scheduled_fight()
         self.in_combat = False
         self.in_preparation = True
         self.awaiting_first_strike = not self.awaiting_reward
-        ready = not self.awaiting_reward
-        self.shop_btn.configure(state=tk.NORMAL if ready else tk.DISABLED)
-        self.recruit_btn.configure(state=tk.NORMAL if ready else tk.DISABLED)
-        self.character_btn.configure(state=tk.NORMAL)
-        self.play_again_btn.configure(state=tk.DISABLED)
         self.main_menu_btn.configure(state=tk.NORMAL)
         self.update_save_run_buttons()
+        self.update_town_button()
         self.set_action_buttons_for_phase()
         self.refresh_stats()
         if self.awaiting_reward:
             self.status_var.set("Victory! Choose your reward.")
-            self.phase_info_var.set("Pick a reward, then prepare at Shop or Recruit.")
+            self.phase_info_var.set("Pick a reward, then return to Town to prepare.")
         elif first_fight:
-            self.status_var.set("Ready to engage")
+            self.status_var.set("Ready in Town")
             self.phase_info_var.set(
-                f"{self.enemy.enemy_type} stands across the arena. "
-                "Use Shop or Recruit, then choose your first move."
+                f"{enemy_display_name(self.enemy)} awaits in the Arena. "
+                "Prepare in Town, then enter Arena when ready."
             )
         else:
-            self.status_var.set("Ready to engage")
+            self.status_var.set("Ready in Town")
             self.phase_info_var.set(
-                "Preparation phase — Shop and Recruit are open. "
-                "Strike first when you are ready."
+                "Town is your hub. Enter the Arena and strike when you are ready to fight."
             )
         if announce_opponent and not self.awaiting_reward:
-            self.log(f"\n{self.enemy.enemy_type} awaits your challenge.")
+            self.log(f"\n{enemy_display_name(self.enemy)} awaits your challenge.")
             if self.enemy.flavor:
                 self.log(self.enemy.flavor)
 
@@ -2321,18 +3782,17 @@ class BattleApp:
         if self.next_enemy_wounded:
             wound = max(1, int(self.enemy.max_health * 0.25))
             self.enemy.health = max(1, self.enemy.health - wound)
-            self.log(f"Your opening strike wounds {self.enemy.enemy_type} for {wound} HP before the fight!")
+            self.log(f"Your opening strike wounds {enemy_display_name(self.enemy)} for {wound} HP before the fight!")
             self.next_enemy_wounded = False
         self.in_combat = True
-        self.shop_btn.configure(state=tk.DISABLED)
-        self.recruit_btn.configure(state=tk.DISABLED)
+        self.update_town_button()
         for mercenary in self.active_mercenaries:
             if mercenary.alive():
                 mercenary.last_action = "Ready"
         self.set_action_buttons_for_phase()
-        self.status_var.set(f"Duel underway against {self.enemy.enemy_type}.")
+        self.status_var.set(f"Duel underway against {enemy_display_name(self.enemy)}.")
         self.phase_info_var.set("Mercenaries act automatically after your move each turn.")
-        self.log(f"\nYou engage {self.enemy.enemy_type}!")
+        self.log(f"\nYou engage {enemy_display_name(self.enemy)}!")
         self.refresh_stats()
 
     def open_shop(self):
@@ -2341,41 +3801,26 @@ class BattleApp:
             return
         self.shop_coins_var.set(f"Coins: {self.coins}")
         self.refresh_shop_gear_list()
+        self.refresh_shop_consumables_list()
         self.hide_all_screens()
         self.shop_frame.pack(fill=tk.BOTH, expand=True)
 
-    def buy_health_salve(self):
+    def buy_consumable(self, item):
         if self.in_combat:
             return
-        if self.coins < 10:
-            messagebox.showinfo("Shop", "You do not have enough coins for that.")
-            return
-        if self.player.health >= self.player.max_health:
-            messagebox.showinfo("Shop", "You are already at full health.")
-            return
-
-        self.coins -= 10
-        heal_amount = min(12, self.player.max_health - self.player.health)
-        self.player.health += heal_amount
-        self.refresh_stats()
-        if self._embedded_screen_visible(self.shop_frame):
-            self.shop_coins_var.set(f"Coins: {self.coins}")
-        self.log(f"You buy a Health Salve and recover {heal_amount} HP.")
-
-    def buy_iron_tonic(self):
-        if self.in_combat:
-            return
-        if self.coins < 15:
+        cost = int(item.get("cost", 0))
+        if self.coins < cost:
             messagebox.showinfo("Shop", "You do not have enough coins for that.")
             return
 
-        self.coins -= 15
-        self.stat_bonuses["defense"] += 1
-        self.apply_player_stats(heal_missing_max=True)
-        self.refresh_stats()
+        self.coins -= cost
+        self.add_consumable(item["id"], 1)
+        qty = self.consumable_quantity(item["id"])
+        self.log(f"You buy {item['name']} — consumables stock: x{qty}.")
         if self._embedded_screen_visible(self.shop_frame):
             self.shop_coins_var.set(f"Coins: {self.coins}")
-        self.log("You drink an Iron Tonic and gain +1 Defense for this run.")
+            self.refresh_shop_consumables_list()
+        self.update_use_item_button()
 
     def buy_equipment(self, item):
         if self.in_combat:
@@ -2393,31 +3838,130 @@ class BattleApp:
 
     def close_shop(self):
         if self.run_started:
-            self.show_battle_screen()
-            if self.in_preparation and not self.awaiting_reward:
-                self.status_var.set("Ready to engage")
-                self.phase_info_var.set(
-                    "Preparation phase — Shop and Recruit are open. Strike first when you are ready."
-                )
+            if self.can_visit_town():
+                self.show_town_screen()
+            else:
+                self.show_battle_screen()
         else:
             self.show_main_menu()
+
+    def _high_score_sort_key(self, entry):
+        return (
+            -int(entry.get("enemies_defeated", 0)),
+            -int(entry.get("highest_enemy_level_reached", 0)),
+            -int(entry.get("final_player_level", 0)),
+            -int(entry.get("total_coins_earned", 0)),
+        )
+
+    def load_high_scores(self):
+        if not os.path.exists(self.high_scores_path):
+            return []
+        try:
+            with open(self.high_scores_path, encoding="utf-8") as handle:
+                data = json.load(handle)
+        except (OSError, json.JSONDecodeError):
+            return []
+        if isinstance(data, list):
+            scores = data
+        elif isinstance(data, dict):
+            scores = data.get("scores", [])
+        else:
+            return []
+        if not isinstance(scores, list):
+            return []
+        def safe_int(value, default=0):
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return default
+
+        cleaned = []
+        for entry in scores:
+            if not isinstance(entry, dict):
+                continue
+            try:
+                cleaned.append(
+                    {
+                        "enemies_defeated": safe_int(entry.get("enemies_defeated"), 0),
+                        "highest_enemy_level_reached": safe_int(entry.get("highest_enemy_level_reached"), 0),
+                        "total_coins_earned": safe_int(entry.get("total_coins_earned"), 0),
+                        "total_xp_earned": safe_int(entry.get("total_xp_earned"), 0),
+                        "final_player_level": safe_int(entry.get("final_player_level"), 1),
+                        "final_race": str(entry.get("final_race", "Unknown")),
+                        "cause_of_defeat": str(entry.get("cause_of_defeat", "Unknown")),
+                    }
+                )
+            except (TypeError, ValueError):
+                continue
+        cleaned.sort(key=self._high_score_sort_key)
+        return cleaned
+
+    def record_high_score(self):
+        entry = {
+            "enemies_defeated": int(self.run_summary.get("enemies_defeated", 0)),
+            "highest_enemy_level_reached": int(self.run_summary.get("highest_enemy_level_reached", 0)),
+            "total_coins_earned": int(self.run_summary.get("total_coins_earned", 0)),
+            "total_xp_earned": int(self.run_summary.get("total_xp_earned", 0)),
+            "final_player_level": int(self.run_summary.get("final_player_level", self.player_level)),
+            "final_race": self.run_summary.get("final_race", self.selected_race),
+            "cause_of_defeat": self.run_summary.get("cause_of_defeat", self.enemy.enemy_type),
+        }
+        scores = self.load_high_scores()
+        scores.append(entry)
+        scores.sort(key=self._high_score_sort_key)
+        try:
+            with open(self.high_scores_path, "w", encoding="utf-8") as handle:
+                json.dump(scores, handle, indent=2)
+        except OSError:
+            return
+
+    def refresh_menu_high_scores(self):
+        if not hasattr(self, "menu_high_scores_var"):
+            return
+        scores = self.load_high_scores()[:5]
+        if not scores:
+            self.menu_high_scores_var.set("No high scores yet.")
+            return
+        lines = []
+        for idx, entry in enumerate(scores, start=1):
+            lines.append(
+                f"{idx}. {entry['final_race']} L{entry['final_player_level']} — "
+                f"{entry['enemies_defeated']} foes, enemy lvl {entry['highest_enemy_level_reached']}, "
+                f"{entry['total_coins_earned']} coins — lost to {entry['cause_of_defeat']}"
+            )
+        self.menu_high_scores_var.set("\n".join(lines))
 
     def show_game_over_screen(self):
         if self.game_over_window is not None and self.game_over_window.winfo_exists():
             self.game_over_window.lift()
             return
 
+        self.record_high_score()
         self.game_over_window = tk.Toplevel(self.root)
         self.game_over_window.title("Game Over")
-        self.game_over_window.geometry("320x180")
+        self.game_over_window.geometry("360x340")
         self.game_over_window.transient(self.root)
         self.game_over_window.grab_set()
         self.game_over_window.configure(bg="#D2B48C")
 
-        ttk.Label(self.game_over_window, text="Game Over", font=("Segoe UI", 16, "bold")).pack(pady=(12, 8))
+        summary = self.run_summary
+        defeated_by = summary.get("cause_of_defeat") or self.enemy.enemy_type
+        summary_text = (
+            f"Race: {summary.get('final_race', self.selected_race)}\n"
+            f"Final Level: {summary.get('final_player_level', self.player_level)}\n"
+            f"Enemies Defeated: {summary.get('enemies_defeated', 0)}\n"
+            f"Highest Enemy Level: {summary.get('highest_enemy_level_reached', 0)}\n"
+            f"Total XP Earned: {summary.get('total_xp_earned', 0)}\n"
+            f"Total Coins Earned: {summary.get('total_coins_earned', 0)}\n"
+            f"Defeated By: {defeated_by}"
+        )
+        ttk.Label(self.game_over_window, text="Game Over", font=("Segoe UI", 16, "bold")).pack(pady=(12, 6))
+        ttk.Label(self.game_over_window, text="Run Summary", font=("Segoe UI", 11, "bold")).pack(pady=(0, 4))
         ttk.Label(
             self.game_over_window,
-            text=f"You reached enemy level {self.enemy_level}.\nStart a new run to climb again.",
+            text=summary_text,
+            justify="left",
+            wraplength=320,
         ).pack(pady=(0, 10))
         ttk.Button(self.game_over_window, text="Start New Run", command=self.start_new_run).pack()
 
@@ -2427,24 +3971,59 @@ class BattleApp:
             self.game_over_window = None
         self.reset_run_state()
         self.run_started = True
-        self.show_battle_screen()
         self.log_box.configure(state=tk.NORMAL)
         self.log_box.delete(1.0, tk.END)
         self.log_box.configure(state=tk.DISABLED)
         self.log("A fresh run begins.")
-        self.log("The arena is ready for another climb.")
+        self.log("Town is your hub. Enter the Arena when you are ready to fight.")
         self.enter_preparation_phase(first_fight=True, announce_opponent=True)
+        self.show_town_screen()
+
+    def _enemy_ai_style_label(self, ai_style):
+        style_label = ai_style.replace("bruiser", "Bruiser").replace("tricky", "Tricky Skirmisher")
+        style_label = style_label.replace("aggressive", "Aggressive Striker").replace("balanced", "Balanced Fighter")
+        return style_label
+
+    def refresh_enemy_preview(self):
+        if not hasattr(self, "enemy_preview_panel"):
+            return
+        show_preview = self.in_preparation and not self.in_combat and not self.awaiting_reward
+        if show_preview:
+            style_label = self._enemy_ai_style_label(self.enemy.ai_style)
+            flavor = self.enemy.flavor or "No scouting report available."
+            role_label = format_combat_role(self.enemy.combat_role)
+            boss_status = "Status: BOSS\n" if self.enemy.is_boss else ""
+            self.enemy_preview_var.set(
+                f"Name: {enemy_display_name(self.enemy)}\n"
+                f"Level: {self.enemy.level}\n"
+                f"{boss_status}"
+                f"Attack: {self.enemy.attack}  Defense: {self.enemy.defense}\n"
+                f"Max HP: {self.enemy.max_health}\n"
+                f"Role: {role_label}\n"
+                f"AI Style: {style_label}\n\n"
+                f"{flavor}"
+            )
+            self.enemy_preview_panel.grid()
+        else:
+            self.enemy_preview_panel.grid_remove()
 
     def refresh_stats(self):
+        self.apply_fight_consumable_bonuses()
         self.player_health_var.set(f"HP: {self.player.health} / {self.player.max_health}")
         self.enemy_health_var.set(f"HP: {self.enemy.health} / {self.enemy.max_health}")
-        self.player_stats_var.set(f"Attack {self.player.attack}  Defense {self.player.defense}")
+        player_role = format_combat_role(self.player.combat_role or self.selected_combat_role)
+        self.player_stats_var.set(
+            f"Attack {self.player.attack}  Defense {self.player.defense}  Role: {player_role}"
+        )
         self.player_equipment_var.set(self.equipment_summary_text())
         self.enemy_stats_var.set(f"Attack {self.enemy.attack}  Defense {self.enemy.defense}")
-        self.enemy_banner_var.set(f"{self.enemy.enemy_type}  —  Level {self.enemy.level}")
-        style_label = self.enemy.ai_style.replace("bruiser", "Bruiser").replace("tricky", "Tricky Skirmisher")
-        style_label = style_label.replace("aggressive", "Aggressive Striker").replace("balanced", "Balanced Fighter")
-        self.enemy_type_var.set(f"Type: {style_label}")
+        banner = f"{enemy_display_name(self.enemy)}  —  Level {self.enemy.level}"
+        if self.enemy.is_boss:
+            banner += "  —  BOSS"
+        self.enemy_banner_var.set(banner)
+        style_label = self._enemy_ai_style_label(self.enemy.ai_style)
+        role_label = format_combat_role(self.enemy.combat_role)
+        self.enemy_type_var.set(f"Type: {style_label} · {role_label}")
         self.progress_level_var.set(f"Level: {self.player_level}")
         self.progress_xp_var.set(f"XP: {self.player_xp} / {self.player_level * 10}")
         self.progress_coins_var.set(f"Coins: {self.coins}")
@@ -2454,8 +4033,10 @@ class BattleApp:
         self.player_bar["value"] = max(0, self.player.health)
         self.enemy_bar["maximum"] = self.enemy.max_health
         self.enemy_bar["value"] = max(0, self.enemy.health)
+        self.refresh_enemy_preview()
         self.refresh_character_panel()
         self.refresh_mercenary_panel()
+        self.update_use_item_button()
         self.root.update_idletasks()
 
     def pick_enemy_theme(self, level):
@@ -2473,8 +4054,25 @@ class BattleApp:
         attack = max(1, 6 + level + theme["attack_mod"])
         defense = max(0, 2 + (level - 1) // 2 + theme["defense_mod"])
         health = max(8, 24 + level * 5 + theme["health_mod"])
+        diff = self.get_difficulty_mods()
+        attack = max(1, attack + diff["attack_mod"])
+        defense = max(0, defense + diff["defense_mod"])
+        health = max(1, health + diff["health_mod"])
+        combat_role = theme.get("combat_role", "melee")
+        if combat_role not in COMBAT_ROLES:
+            combat_role = "melee"
+        is_boss = is_boss_level(level)
+        boss_name = ""
+        if is_boss:
+            attack += BOSS_ATTACK_BONUS
+            defense += BOSS_DEFENSE_BONUS
+            health += random.randint(BOSS_HP_BONUS_MIN, BOSS_HP_BONUS_MAX)
+            boss_name = generate_boss_name(theme)
+            name = f"{boss_name} (Lv {level})"
+        else:
+            name = f"{theme['name']} (Lv {level})"
         return Combatant(
-            f"{theme['name']} (Lv {level})",
+            name,
             attack,
             defense,
             health,
@@ -2482,6 +4080,9 @@ class BattleApp:
             flavor=theme["flavor"],
             ai_style=theme["ai_style"],
             enemy_type=theme["name"],
+            combat_role=combat_role,
+            is_boss=is_boss,
+            boss_name=boss_name,
         )
 
     def show_level_up_dialog(self):
@@ -2558,6 +4159,7 @@ class BattleApp:
                 self.log(f"Reward: {label} — {detail}.")
             elif key == "coins":
                 self.coins += value
+                self.run_summary["total_coins_earned"] += value
                 self.log(f"Reward: {label} — {detail}.")
             elif key == "heal":
                 healed = min(value, self.player.max_health - self.player.health)
@@ -2569,9 +4171,12 @@ class BattleApp:
             if key in {"attack", "defense", "health"}:
                 self.apply_player_stats(heal_missing_max=True)
             self.awaiting_reward = False
+            self.pending_reward_options = None
             self.refresh_stats()
             dialog.destroy()
             self.maybe_offer_loot_drop()
+            if self.can_visit_town():
+                self.show_town_screen()
 
         for option in options:
             label, detail, _, _ = option
@@ -2590,7 +4195,7 @@ class BattleApp:
         enemy_action = self.enemy_choice(player_action)
         action_names = {"swing": "swing", "block": "block", "power": "power strike"}
         self.log(f"\nYou choose to {action_names[player_action]}.")
-        self.log(f"{self.enemy.enemy_type} chooses to {enemy_action}.")
+        self.log(f"{enemy_display_name(self.enemy)} chooses to {enemy_action}.")
 
         if player_action == "power":
             self.resolve_power_strike(enemy_action)
@@ -2598,10 +4203,9 @@ class BattleApp:
         elif player_action == "swing" and enemy_action == "swing":
             player_hits = self.compute_damage(self.player, self.enemy)
             enemy_hits = self.compute_damage(self.enemy, self.player)
-            if self._player_damage_reduction_next:
-                enemy_hits = max(1, enemy_hits - 3)
-                self._player_damage_reduction_next = False
-                self.log("Shield Wall softens the enemy riposte!")
+            enemy_hits, reduced = self._apply_player_damage_reduction(enemy_hits)
+            if reduced:
+                self.log("Smoke or cover softens the enemy riposte!")
             self.enemy.health -= player_hits
             self.player.health -= enemy_hits
             self.log(f"Your blade lands for {player_hits} damage.")
@@ -2613,10 +4217,9 @@ class BattleApp:
             self.log("The enemy braces and softens the blow.")
         elif player_action == "block" and enemy_action == "swing":
             enemy_hits = self.compute_damage(self.enemy, self.player, blocked=True)
-            if self._player_damage_reduction_next:
-                enemy_hits = max(1, enemy_hits - 2)
-                self._player_damage_reduction_next = False
-                self.log("Shield Wall further reduces the blow!")
+            enemy_hits, reduced = self._apply_player_damage_reduction(enemy_hits)
+            if reduced:
+                self.log("Smoke or cover further reduces the blow!")
             self.player.health -= enemy_hits
             self.log(f"The enemy lunges for {enemy_hits} damage.")
             self.log("You raise your guard and take less punishment.")
@@ -2648,10 +4251,9 @@ class BattleApp:
 
         if enemy_action == "swing":
             enemy_hits = self.compute_damage(self.enemy, self.player)
-            if self._player_damage_reduction_next:
-                enemy_hits = max(1, enemy_hits - 3)
-                self._player_damage_reduction_next = False
-                self.log("Shield Wall absorbs part of the counterattack!")
+            enemy_hits, reduced = self._apply_player_damage_reduction(enemy_hits)
+            if reduced:
+                self.log("Smoke or cover absorbs part of the counterattack!")
             self.player.health -= enemy_hits
             self.log(f"You are wide open — the enemy punishes you for {enemy_hits} damage!")
         elif enemy_action == "block":
@@ -2680,14 +4282,14 @@ class BattleApp:
     def compute_damage(self, attacker, defender, blocked=False):
         base = max(1, attacker.attack - defender.defense)
         if blocked:
-            return max(1, base - BLOCK_DAMAGE_REDUCTION)
-        return base
+            base = max(1, base - BLOCK_DAMAGE_REDUCTION)
+        return max(1, base + role_damage_bonus(attacker, defender))
 
     def compute_power_damage(self, attacker, defender, enemy_blocked):
         base = max(1, attacker.attack - defender.defense) + POWER_STRIKE_BONUS
         if enemy_blocked:
-            return max(1, base - BLOCK_DAMAGE_REDUCTION // 2)
-        return base
+            base = max(1, base - BLOCK_DAMAGE_REDUCTION // 2)
+        return max(1, base + role_damage_bonus(attacker, defender))
 
     def apply_rest_heal(self):
         if self.player.health < self.player.max_health:
@@ -2697,18 +4299,32 @@ class BattleApp:
         self.apply_mercenary_rest_heal()
 
     def finish_match(self, victory):
+        self.clear_fight_consumable_buffs()
         if victory:
             xp_mult = float(self.battle_bonuses.get("xp_multiplier", 1.0))
             coin_bonus = int(self.battle_bonuses.get("coin_bonus", 0))
+            diff_coin_bonus = int(self.get_difficulty_mods()["coin_bonus"])
             xp_gain = max(1, int(self.enemy.level * xp_mult))
-            coin_gain = 5 + coin_bonus
+            coin_gain = 5 + coin_bonus + diff_coin_bonus
+            defeated_boss = self.enemy.is_boss
+            if defeated_boss:
+                xp_gain += BOSS_XP_BONUS
+                coin_gain += BOSS_COIN_BONUS
             self.player_xp += xp_gain
             self.coins += coin_gain
+            self.run_summary["enemies_defeated"] += 1
+            self.run_summary["highest_enemy_level_reached"] = max(
+                self.run_summary["highest_enemy_level_reached"], self.enemy.level
+            )
+            self.run_summary["total_xp_earned"] += xp_gain
+            self.run_summary["total_coins_earned"] += coin_gain
             remaining_hp = self.player.health
             self.log(
-                f"\nVictory over {self.enemy.enemy_type}! You gain {xp_gain} XP and {coin_gain} coins. "
+                f"\nVictory over {enemy_display_name(self.enemy)}! You gain {xp_gain} XP and {coin_gain} coins. "
                 f"You remain at {remaining_hp}/{self.player.max_health} HP."
             )
+            if defeated_boss:
+                self.log(f"Boss bonus: +{BOSS_XP_BONUS} XP and +{BOSS_COIN_BONUS} coins.")
             self.check_level_up()
             self.apply_rest_heal()
             self.refresh_recruitment_pool()
@@ -2716,19 +4332,19 @@ class BattleApp:
             self.enemy = self.make_enemy(self.enemy_level)
             self.awaiting_reward = True
             self.enter_preparation_phase()
-            self.log(f"A stronger challenger awaits: {self.enemy.enemy_type}.")
-            reward_options = self.build_reward_options()
-            self.show_victory_reward_dialog(reward_options)
+            self.log(f"A stronger challenger awaits: {enemy_display_name(self.enemy)}.")
+            self.pending_reward_options = self.build_reward_options()
+            self.show_victory_reward_dialog(self.pending_reward_options)
         else:
+            self.run_summary["final_player_level"] = self.player_level
+            self.run_summary["final_race"] = self.selected_race
+            self.run_summary["cause_of_defeat"] = enemy_display_name(self.enemy)
             self.cancel_scheduled_fight()
             self.in_combat = False
             self.in_preparation = False
             self.awaiting_first_strike = False
             self.set_action_buttons_for_phase()
-            self.play_again_btn.configure(state=tk.NORMAL)
-            self.shop_btn.configure(state=tk.DISABLED)
-            self.recruit_btn.configure(state=tk.DISABLED)
-            self.character_btn.configure(state=tk.DISABLED)
+            self.update_town_button()
             self.main_menu_btn.configure(state=tk.NORMAL)
             self.update_save_run_buttons()
             self.status_var.set("Defeat: your warrior falls.")
@@ -2736,6 +4352,7 @@ class BattleApp:
             if self.active_mercenaries or self.fallen_mercenaries:
                 self.log("Your mercenaries scatter — hire anew on the next run.")
             self.show_game_over_screen()
+            self.update_use_item_button()
 
 
     # --- Custom content, admin tools, stat reset, and loot drops ---
@@ -2752,11 +4369,15 @@ class BattleApp:
         custom_items = data.get("shop_items", [])
         custom_mercs = data.get("mercenaries", [])
         custom_enemies = data.get("enemies", [])
+        custom_consumables = data.get("consumables", [])
         removed_items = set(data.get("removed_shop_items", []))
         removed_enemies = set(data.get("removed_enemies", []))
+        removed_consumables = set(data.get("removed_consumables", []))
         base_items = [item for item in SHOP_EQUIPMENT if item["id"] not in removed_items]
         base_enemies = [enemy for enemy in ENEMY_THEMES if enemy["name"] not in removed_enemies]
+        base_consumables = [item for item in SHOP_CONSUMABLES if item["id"] not in removed_consumables]
         self.shop_equipment = merge_custom_lists(base_items, custom_items)
+        self.shop_consumables = merge_custom_lists(base_consumables, custom_consumables)
         self.mercenary_templates = merge_custom_lists(MERCENARY_TEMPLATES, custom_mercs)
         self.enemy_themes = merge_custom_lists(base_enemies, custom_enemies, key="name")
         bonuses = data.get("battle_bonuses", {})
@@ -2772,6 +4393,8 @@ class BattleApp:
         custom_enemies,
         removed_shop_items=None,
         removed_enemies=None,
+        custom_consumables=None,
+        removed_consumables=None,
     ):
         """Persist admin additions to game_custom.json."""
         existing = self._load_custom_file_raw()
@@ -2779,6 +4402,9 @@ class BattleApp:
             "shop_items": custom_items,
             "mercenaries": custom_mercs,
             "enemies": custom_enemies,
+            "consumables": (
+                custom_consumables if custom_consumables is not None else existing.get("consumables", [])
+            ),
             "removed_shop_items": (
                 removed_shop_items
                 if removed_shop_items is not None
@@ -2786,6 +4412,11 @@ class BattleApp:
             ),
             "removed_enemies": (
                 removed_enemies if removed_enemies is not None else existing.get("removed_enemies", [])
+            ),
+            "removed_consumables": (
+                removed_consumables
+                if removed_consumables is not None
+                else existing.get("removed_consumables", [])
             ),
             "battle_bonuses": self.battle_bonuses,
         }
@@ -2824,8 +4455,10 @@ class BattleApp:
             "custom_items": data.get("shop_items", []),
             "custom_mercs": data.get("mercenaries", []),
             "custom_enemies": data.get("enemies", []),
-            "removed_items": data.get("removed_shop_items", []),
+            "custom_consumables": data.get("consumables", []),
+            "removed_shop_items": data.get("removed_shop_items", []),
             "removed_enemies": data.get("removed_enemies", []),
+            "removed_consumables": data.get("removed_consumables", []),
         }
 
     def open_reset_stats_dialog(self):

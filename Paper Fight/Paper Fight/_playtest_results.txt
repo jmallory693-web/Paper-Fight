@@ -1,0 +1,32 @@
+=== GUI SMOKE TEST ===
+  [PASS] menu on launch
+  [PASS] battle screen hidden
+  [PASS] run started
+  [PASS] build applied
+  [PASS] combat + log updates
+  [PASS] shop enabled in run
+  [PASS] defeat state wiring
+
+=== BALANCE SIMULATIONS (100 seeds, mixed strategy) ===
+  glass cannon (15 ATK): avg=2.7 wins, min=2, max=6
+  turtle (15 DEF): avg=6.3 wins, min=6, max=9
+  HP tank (15 HP pts): avg=3.2 wins, min=3, max=4
+  saved build: avg=5.1 wins, min=5, max=6
+  balanced (5/5/5): avg=6.0 wins, min=6, max=7
+
+=== STRATEGY COMPARISON (saved build) ===
+  aggressive: avg=6.0 wins
+  defensive: avg=4.8 wins
+  mixed: avg=5.1 wins
+
+=== PACING SAMPLE (saved build, seed 7) ===
+  battles won: 5, final level: 2
+  avg turns/battle: 16.6, shop heals used: 0
+
+=== DAMAGE AT KEY MILESTONES ===
+  vs Lv1 (7/2/29): trade=7/1, blocked=1
+  vs Lv3 (9/3/39): trade=6/3, blocked=1
+  vs Lv5 (11/4/49): trade=5/5, blocked=1
+  vs Lv8 (14/5/64): trade=4/8, blocked=4
+
+GUI smoke test overall: PASS

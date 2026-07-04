@@ -1,0 +1,106 @@
+{
+  "version": 2,
+  "build": {
+    "race": "Human",
+    "attack": 5,
+    "defense": 5,
+    "health": 5,
+    "difficulty": "Normal",
+    "combat_role": "melee"
+  },
+  "run": {
+    "player_level": 4,
+    "player_xp": 5,
+    "coins": 86,
+    "enemy_level": 11,
+    "stat_bonuses": {
+      "attack": 4,
+      "defense": 3,
+      "health": 21
+    },
+    "power_strike_cooldown": 0,
+    "next_enemy_wounded": false,
+    "player_health": 31,
+    "equipment": {
+      "head": null,
+      "chest": {
+        "id": "worn_tunic",
+        "name": "Worn Tunic",
+        "slot": "chest",
+        "defense": 1
+      },
+      "legs": {
+        "id": "iron_greaves",
+        "name": "Iron Greaves",
+        "slot": "legs",
+        "defense": 2,
+        "price": 16
+      },
+      "arms": null,
+      "weapon": {
+        "id": "rusty_dagger",
+        "name": "Rusty Dagger",
+        "slot": "weapon",
+        "attack": 1
+      },
+      "shield": {
+        "id": "wooden_shield",
+        "name": "Wooden Shield",
+        "slot": "shield",
+        "defense": 1
+      },
+      "ring1": {
+        "id": "ring_of_might",
+        "name": "Ring of Might",
+        "slot": "ring1",
+        "attack": 1,
+        "price": 12
+      },
+      "ring2": {
+        "id": "ring_of_warding",
+        "name": "Ring of Warding",
+        "slot": "ring2",
+        "defense": 1,
+        "price": 12
+      },
+      "amulet": null
+    },
+    "inventory": [],
+    "active_mercenaries": [],
+    "fallen_mercenaries": [],
+    "recruitment_pool": [
+      "swiftarrow",
+      "mira_leaf",
+      "ironjaw"
+    ],
+    "enemy": {
+      "name": "Feral Cat (Lv 11)",
+      "attack": 19,
+      "defense": 7,
+      "health": 74,
+      "max_health": 74,
+      "level": 11,
+      "flavor": "A feral cat slinks into the arena, fur bristling as it hisses.",
+      "ai_style": "aggressive",
+      "enemy_type": "Feral Cat",
+      "combat_role": "melee",
+      "is_boss": false,
+      "boss_name": ""
+    },
+    "awaiting_reward": false,
+    "in_combat": false,
+    "in_preparation": true,
+    "awaiting_first_strike": true,
+    "pending_reward_options": null,
+    "player_damage_reduction_next": false,
+    "run_summary": {
+      "enemies_defeated": 10,
+      "highest_enemy_level_reached": 10,
+      "total_coins_earned": 76,
+      "total_xp_earned": 65,
+      "final_player_level": 1,
+      "final_race": "Human",
+      "cause_of_defeat": ""
+    }
+  }
+}
