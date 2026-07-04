@@ -21,6 +21,38 @@ BASE_ATTACK = 6
 BASE_DEFENSE = 2
 BASE_HEALTH = 25
 
+DIFFICULTIES = {
+    "Easy": {
+        "attack_mod": -1,
+        "defense_mod": 0,
+        "health_mod": -5,
+        "coin_bonus": 0,
+        "desc": "Enemies have -1 Attack and -5 Max HP. Rewards unchanged.",
+    },
+    "Normal": {
+        "attack_mod": 0,
+        "defense_mod": 0,
+        "health_mod": 0,
+        "coin_bonus": 0,
+        "desc": "Standard arena challenge.",
+    },
+    "Hard": {
+        "attack_mod": 1,
+        "defense_mod": 0,
+        "health_mod": 8,
+        "coin_bonus": 2,
+        "desc": "Enemies have +1 Attack and +8 Max HP. +2 coins per victory.",
+    },
+    "Brutal": {
+        "attack_mod": 2,
+        "defense_mod": 1,
+        "health_mod": 15,
+        "coin_bonus": 5,
+        "desc": "Enemies have +2 Attack, +1 Defense, and +15 Max HP. +5 coins per victory.",
+    },
+}
+DEFAULT_DIFFICULTY = "Normal"
+
 # Playable races: small bonuses applied on top of the 15-point allocation.
 RACES = {
     "Human": {
@@ -391,6 +423,7 @@ class BattleApp:
 
         # Build, race, equipment, and bonus tracking.
         self.selected_race = "Human"
+        self.selected_difficulty = DEFAULT_DIFFICULTY
         self.stat_bonuses = {"attack": 0, "defense": 0, "health": 0}
         self.equipment = {slot: None for slot in EQUIPMENT_SLOTS}
         self.inventory = []
@@ -412,10 +445,12 @@ class BattleApp:
         self.save_path = os.path.join(os.path.dirname(__file__), "player_build.json")
         self.build_save_path = os.path.join(os.path.dirname(__file__), "saved_build.json")
         self.run_save_path = os.path.join(os.path.dirname(__file__), "player_run.json")
+        self.high_scores_path = os.path.join(os.path.dirname(__file__), "high_scores.json")
         self.saved_equipment_from_build = None
         self.admin_unlocked = True
         self.title_click_count = 0
         self.pending_loot_item = None
+        self.run_summary = {}
 
         self.build_ui()
         self.show_main_menu()
@@ -462,6 +497,14 @@ class BattleApp:
             self.menu_frame, text="Admin Mode", command=self.open_admin_panel, width=22
         )
         self.admin_btn.pack(pady=(10, 4))
+        ttk.Label(self.menu_frame, text="Top Runs", font=("Segoe UI", 11, "bold")).pack(pady=(8, 2))
+        self.menu_high_scores_var = tk.StringVar(value="No high scores yet.")
+        ttk.Label(
+            self.menu_frame,
+            textvariable=self.menu_high_scores_var,
+            justify="left",
+            wraplength=480,
+        ).pack(pady=(0, 4))
         self.menu_status_var = tk.StringVar(value="Create or load a build to begin.")
         self.menu_status_label = ttk.Label(self.menu_frame, textvariable=self.menu_status_var)
         self.menu_status_label.pack(pady=(12, 0))
@@ -492,6 +535,21 @@ class BattleApp:
         self.race_combo.bind("<<ComboboxSelected>>", self.on_race_changed)
         self.race_desc_var = tk.StringVar()
         ttk.Label(self.creation_frame, textvariable=self.race_desc_var, wraplength=480).pack(pady=(4, 8))
+        difficulty_row = ttk.Frame(self.creation_frame)
+        difficulty_row.pack(pady=4)
+        ttk.Label(difficulty_row, text="Difficulty:").pack(side=tk.LEFT, padx=(0, 8))
+        self.difficulty_var = tk.StringVar(value=self.selected_difficulty)
+        self.difficulty_combo = ttk.Combobox(
+            difficulty_row,
+            textvariable=self.difficulty_var,
+            values=list(DIFFICULTIES.keys()),
+            state="readonly",
+            width=14,
+        )
+        self.difficulty_combo.pack(side=tk.LEFT)
+        self.difficulty_combo.bind("<<ComboboxSelected>>", self.on_difficulty_changed)
+        self.difficulty_desc_var = tk.StringVar()
+        ttk.Label(self.creation_frame, textvariable=self.difficulty_desc_var, wraplength=480).pack(pady=(4, 8))
         self.creation_points_var = tk.StringVar(value="Points left: 15")
         ttk.Label(self.creation_frame, textvariable=self.creation_points_var, font=("Segoe UI", 11, "bold")).pack()
         rows = ttk.Frame(self.creation_frame)
@@ -658,6 +716,17 @@ class BattleApp:
             anchor="w"
         )
         ttk.Label(self.enemy_card, textvariable=self.enemy_stats_var).pack(anchor="w", pady=(1, 0))
+
+        self.enemy_preview_panel = ttk.LabelFrame(right_col, text="Enemy Preview", padding=6)
+        self.enemy_preview_panel.grid(row=1, column=0, sticky="ew", pady=(6, 0))
+        self.enemy_preview_var = tk.StringVar(value="")
+        ttk.Label(
+            self.enemy_preview_panel,
+            textvariable=self.enemy_preview_var,
+            wraplength=260,
+            justify="left",
+        ).pack(anchor="w")
+        self.enemy_preview_panel.grid_remove()
 
         ttk.Separator(self.main_frame, orient="horizontal").grid(row=3, column=0, columnspan=3, sticky="ew", pady=4)
 
@@ -1227,11 +1296,15 @@ class BattleApp:
                 detail = self.format_item_detail(item)
                 row = ttk.Frame(frame)
                 row.pack(fill=tk.X, pady=4)
+                info = ttk.Frame(row)
+                info.pack(side=tk.LEFT, anchor="w", fill=tk.X, expand=True)
                 ttk.Label(
-                    row,
+                    info,
                     text=f"{item['name']} — {item['price']} coins — {detail}",
                     wraplength=360,
-                ).pack(side=tk.LEFT, anchor="w")
+                ).pack(anchor="w")
+                for line in self._shop_equipped_comparison_text(item).split("\n"):
+                    ttk.Label(info, text=line, wraplength=360).pack(anchor="w")
                 ttk.Button(
                     row,
                     text=f"Buy ({item['price']})",
@@ -1339,6 +1412,54 @@ class BattleApp:
         if item.get("health"):
             bits.append(f"+{item['health']} HP")
         return ", ".join(bits) if bits else "no bonus"
+
+    def _equip_target_slot(self, item):
+        slot = item["slot"]
+        if slot == "ring1":
+            if self.equipment["ring1"] and not self.equipment["ring2"]:
+                return "ring2"
+            if self.equipment["ring1"] and self.equipment["ring2"]:
+                return "ring1"
+        return slot
+
+    def _item_stat_totals(self, item):
+        if not item:
+            return {"attack": 0, "defense": 0, "health": 0}
+        return {
+            "attack": int(item.get("attack", 0)),
+            "defense": int(item.get("defense", 0)),
+            "health": int(item.get("health", 0)),
+        }
+
+    def _format_stat_change_line(self, delta):
+        parts = []
+        for key, label in (("attack", "ATK"), ("defense", "DEF"), ("health", "HP")):
+            change = delta[key]
+            if change > 0:
+                parts.append(f"+{change} {label}")
+            elif change < 0:
+                parts.append(f"{change} {label}")
+        if not parts:
+            return "Change: no stat difference"
+        return "Change: " + ", ".join(parts)
+
+    def _shop_equipped_comparison_text(self, item):
+        slot = self._equip_target_slot(item)
+        equipped = self.equipment.get(slot)
+        slot_label = slot.replace("ring1", "Ring 1").replace("ring2", "Ring 2").title()
+        new_stats = self._item_stat_totals(item)
+        lines = []
+        if item.get("slot") in ("ring1", "ring2"):
+            lines.append(f"Compares to: {slot_label}")
+        if not equipped:
+            lines.append(f"Currently equipped: Empty ({slot_label})")
+            lines.append(self._format_stat_change_line(new_stats) if any(new_stats.values()) else "Change: no stat bonus")
+        else:
+            old_stats = self._item_stat_totals(equipped)
+            delta = {key: new_stats[key] - old_stats[key] for key in new_stats}
+            lines.append(f"Currently equipped: {equipped['name']} — {self.format_item_detail(equipped)}")
+            lines.append(self._format_stat_change_line(delta))
+        return "\n".join(lines)
 
     def equip_item(self, item):
         """Place an item into its slot, replacing anything already worn there."""
@@ -1703,6 +1824,7 @@ class BattleApp:
         self.menu_frame.pack(fill=tk.BOTH, expand=True)
         self.update_admin_button_visibility()
         self.update_menu_buttons()
+        self.refresh_menu_high_scores()
 
     def update_save_run_buttons(self):
         """Sync Save Run button state on the menu and battle footer."""
@@ -1772,8 +1894,11 @@ class BattleApp:
         self.creation_defense_points = 0
         self.creation_health_points = 0
         self.selected_race = "Human"
+        self.selected_difficulty = DEFAULT_DIFFICULTY
         if hasattr(self, "race_var"):
             self.race_var.set(self.selected_race)
+        if hasattr(self, "difficulty_var"):
+            self.difficulty_var.set(self.selected_difficulty)
         self.show_character_creation_screen()
 
     def quit_game(self):
@@ -1789,6 +1914,7 @@ class BattleApp:
             "attack": self.creation_attack_points,
             "defense": self.creation_defense_points,
             "health": self.creation_health_points,
+            "difficulty": self.selected_difficulty,
             "equipment": {slot: (dict(item) if item else None) for slot, item in self.equipment.items()},
         }
 
@@ -1878,6 +2004,7 @@ class BattleApp:
                 "attack": self.creation_attack_points,
                 "defense": self.creation_defense_points,
                 "health": self.creation_health_points,
+                "difficulty": self.selected_difficulty,
             },
             "run": {
                 "player_level": self.player_level,
@@ -1895,6 +2022,7 @@ class BattleApp:
                 "recruitment_pool": [t["id"] for t in self.recruitment_pool],
                 "enemy": self.enemy_to_dict(),
                 "awaiting_reward": self.awaiting_reward,
+                "run_summary": dict(self.run_summary),
             },
         }
 
@@ -1922,6 +2050,8 @@ class BattleApp:
         if race not in RACES:
             race = "Human"
         self.selected_race = race
+        difficulty = build.get("difficulty", DEFAULT_DIFFICULTY)
+        self.selected_difficulty = difficulty if difficulty in DIFFICULTIES else DEFAULT_DIFFICULTY
         self.creation_attack_points = int(build.get("attack", 0))
         self.creation_defense_points = int(build.get("defense", 0))
         self.creation_health_points = int(build.get("health", 0))
@@ -1964,6 +2094,16 @@ class BattleApp:
             for template_id in pool_ids
             if get_mercenary_template(template_id, self.mercenary_templates)
         ]
+        saved_summary = run.get("run_summary", {})
+        self.run_summary = {
+            "enemies_defeated": int(saved_summary.get("enemies_defeated", 0)),
+            "highest_enemy_level_reached": int(saved_summary.get("highest_enemy_level_reached", 0)),
+            "total_coins_earned": int(saved_summary.get("total_coins_earned", 0)),
+            "total_xp_earned": int(saved_summary.get("total_xp_earned", 0)),
+            "final_player_level": int(saved_summary.get("final_player_level", self.player_level)),
+            "final_race": saved_summary.get("final_race", self.selected_race),
+            "cause_of_defeat": saved_summary.get("cause_of_defeat", ""),
+        }
         self.in_combat = False
         self.in_preparation = False
         self.awaiting_first_strike = False
@@ -2057,6 +2197,10 @@ class BattleApp:
             messagebox.showinfo("Build Error", "The saved build is invalid; it must use 15 total points.")
             return
         self.selected_race = race
+        difficulty = data.get("difficulty", DEFAULT_DIFFICULTY)
+        self.selected_difficulty = difficulty if difficulty in DIFFICULTIES else DEFAULT_DIFFICULTY
+        if hasattr(self, "difficulty_var"):
+            self.difficulty_var.set(self.selected_difficulty)
         self.creation_attack_points = attack
         self.creation_defense_points = defense
         self.creation_health_points = health
@@ -2087,6 +2231,15 @@ class BattleApp:
         self.selected_race = self.race_var.get()
         self.update_creation_screen()
 
+    def on_difficulty_changed(self, _event=None):
+        self.selected_difficulty = self.difficulty_var.get()
+        if self.selected_difficulty not in DIFFICULTIES:
+            self.selected_difficulty = DEFAULT_DIFFICULTY
+        self.update_creation_screen()
+
+    def get_difficulty_mods(self):
+        return DIFFICULTIES.get(self.selected_difficulty, DIFFICULTIES[DEFAULT_DIFFICULTY])
+
     def adjust_creation_stat(self, stat, delta):
         if delta > 0 and self.creation_points_left <= 0:
             return
@@ -2114,11 +2267,18 @@ class BattleApp:
     def update_creation_screen(self):
         if hasattr(self, "race_var"):
             self.selected_race = self.race_var.get()
+        if hasattr(self, "difficulty_var"):
+            self.selected_difficulty = self.difficulty_var.get()
+            if self.selected_difficulty not in DIFFICULTIES:
+                self.selected_difficulty = DEFAULT_DIFFICULTY
+                self.difficulty_var.set(self.selected_difficulty)
         self.creation_points_var.set(f"Points left: {self.creation_points_left}")
         self.attack_points_var.set(str(self.creation_attack_points))
         self.defense_points_var.set(str(self.creation_defense_points))
         self.health_points_var.set(str(self.creation_health_points))
         self.race_desc_var.set(RACES[self.selected_race]["desc"])
+        if hasattr(self, "difficulty_desc_var"):
+            self.difficulty_desc_var.set(DIFFICULTIES[self.selected_difficulty]["desc"])
         attack, defense, health = self.compute_preview_stats()
         self.preview_attack_var.set(f"Attack: {attack}")
         self.preview_defense_var.set(f"Defense: {defense}")
@@ -2128,6 +2288,10 @@ class BattleApp:
         if self.creation_points_left != 0:
             messagebox.showinfo("Build Incomplete", "Spend all 15 points before starting your run.")
             return
+        if hasattr(self, "difficulty_var"):
+            self.selected_difficulty = self.difficulty_var.get()
+            if self.selected_difficulty not in DIFFICULTIES:
+                self.selected_difficulty = DEFAULT_DIFFICULTY
 
         self.reset_run_state()
         self.run_started = True
@@ -2137,14 +2301,26 @@ class BattleApp:
         self.log_box.configure(state=tk.NORMAL)
         self.log_box.delete(1.0, tk.END)
         self.log_box.configure(state=tk.DISABLED)
-        self.log(f"A new run begins as a {self.selected_race} warrior.")
+        self.log(f"A new run begins as a {self.selected_race} warrior on {self.selected_difficulty} difficulty.")
         self.log("Your chosen build is ready. The arena calls your name.")
         self.log("Take your time in preparation — Shop and Recruit are open before each duel.")
         self.log("Combat begins when you choose your first move.")
         self.enter_preparation_phase(first_fight=True, announce_opponent=True)
 
+    def init_run_summary(self):
+        self.run_summary = {
+            "enemies_defeated": 0,
+            "highest_enemy_level_reached": 0,
+            "total_coins_earned": 0,
+            "total_xp_earned": 0,
+            "final_player_level": 1,
+            "final_race": self.selected_race,
+            "cause_of_defeat": "",
+        }
+
     def reset_run_state(self):
         """Reset a run to the player's saved build allocation, race, and starting equipment."""
+        self.init_run_summary()
         self.stat_bonuses = {"attack": 0, "defense": 0, "health": 0}
         self.inventory = []
         self.init_starting_equipment()
@@ -2456,22 +2632,114 @@ class BattleApp:
         else:
             self.show_main_menu()
 
+    def _high_score_sort_key(self, entry):
+        return (
+            -int(entry.get("enemies_defeated", 0)),
+            -int(entry.get("highest_enemy_level_reached", 0)),
+            -int(entry.get("final_player_level", 0)),
+            -int(entry.get("total_coins_earned", 0)),
+        )
+
+    def load_high_scores(self):
+        if not os.path.exists(self.high_scores_path):
+            return []
+        try:
+            with open(self.high_scores_path, encoding="utf-8") as handle:
+                data = json.load(handle)
+        except (OSError, json.JSONDecodeError):
+            return []
+        if isinstance(data, list):
+            scores = data
+        elif isinstance(data, dict):
+            scores = data.get("scores", [])
+        else:
+            return []
+        if not isinstance(scores, list):
+            return []
+        cleaned = []
+        for entry in scores:
+            if not isinstance(entry, dict):
+                continue
+            cleaned.append(
+                {
+                    "enemies_defeated": int(entry.get("enemies_defeated", 0)),
+                    "highest_enemy_level_reached": int(entry.get("highest_enemy_level_reached", 0)),
+                    "total_coins_earned": int(entry.get("total_coins_earned", 0)),
+                    "total_xp_earned": int(entry.get("total_xp_earned", 0)),
+                    "final_player_level": int(entry.get("final_player_level", 1)),
+                    "final_race": str(entry.get("final_race", "Unknown")),
+                    "cause_of_defeat": str(entry.get("cause_of_defeat", "Unknown")),
+                }
+            )
+        cleaned.sort(key=self._high_score_sort_key)
+        return cleaned
+
+    def record_high_score(self):
+        entry = {
+            "enemies_defeated": int(self.run_summary.get("enemies_defeated", 0)),
+            "highest_enemy_level_reached": int(self.run_summary.get("highest_enemy_level_reached", 0)),
+            "total_coins_earned": int(self.run_summary.get("total_coins_earned", 0)),
+            "total_xp_earned": int(self.run_summary.get("total_xp_earned", 0)),
+            "final_player_level": int(self.run_summary.get("final_player_level", self.player_level)),
+            "final_race": self.run_summary.get("final_race", self.selected_race),
+            "cause_of_defeat": self.run_summary.get("cause_of_defeat", self.enemy.enemy_type),
+        }
+        scores = self.load_high_scores()
+        scores.append(entry)
+        scores.sort(key=self._high_score_sort_key)
+        try:
+            with open(self.high_scores_path, "w", encoding="utf-8") as handle:
+                json.dump(scores, handle, indent=2)
+        except OSError:
+            return
+
+    def refresh_menu_high_scores(self):
+        if not hasattr(self, "menu_high_scores_var"):
+            return
+        scores = self.load_high_scores()[:5]
+        if not scores:
+            self.menu_high_scores_var.set("No high scores yet.")
+            return
+        lines = []
+        for idx, entry in enumerate(scores, start=1):
+            lines.append(
+                f"{idx}. {entry['final_race']} L{entry['final_player_level']} — "
+                f"{entry['enemies_defeated']} foes, enemy lvl {entry['highest_enemy_level_reached']}, "
+                f"{entry['total_coins_earned']} coins — lost to {entry['cause_of_defeat']}"
+            )
+        self.menu_high_scores_var.set("\n".join(lines))
+
     def show_game_over_screen(self):
         if self.game_over_window is not None and self.game_over_window.winfo_exists():
             self.game_over_window.lift()
             return
 
+        self.record_high_score()
         self.game_over_window = tk.Toplevel(self.root)
         self.game_over_window.title("Game Over")
-        self.game_over_window.geometry("320x180")
+        self.game_over_window.geometry("360x340")
         self.game_over_window.transient(self.root)
         self.game_over_window.grab_set()
         self.game_over_window.configure(bg="#D2B48C")
 
-        ttk.Label(self.game_over_window, text="Game Over", font=("Segoe UI", 16, "bold")).pack(pady=(12, 8))
+        summary = self.run_summary
+        defeated_by = summary.get("cause_of_defeat") or self.enemy.enemy_type
+        summary_text = (
+            f"Race: {summary.get('final_race', self.selected_race)}\n"
+            f"Final Level: {summary.get('final_player_level', self.player_level)}\n"
+            f"Enemies Defeated: {summary.get('enemies_defeated', 0)}\n"
+            f"Highest Enemy Level: {summary.get('highest_enemy_level_reached', 0)}\n"
+            f"Total XP Earned: {summary.get('total_xp_earned', 0)}\n"
+            f"Total Coins Earned: {summary.get('total_coins_earned', 0)}\n"
+            f"Defeated By: {defeated_by}"
+        )
+        ttk.Label(self.game_over_window, text="Game Over", font=("Segoe UI", 16, "bold")).pack(pady=(12, 6))
+        ttk.Label(self.game_over_window, text="Run Summary", font=("Segoe UI", 11, "bold")).pack(pady=(0, 4))
         ttk.Label(
             self.game_over_window,
-            text=f"You reached enemy level {self.enemy_level}.\nStart a new run to climb again.",
+            text=summary_text,
+            justify="left",
+            wraplength=320,
         ).pack(pady=(0, 10))
         ttk.Button(self.game_over_window, text="Start New Run", command=self.start_new_run).pack()
 
@@ -2489,6 +2757,30 @@ class BattleApp:
         self.log("The arena is ready for another climb.")
         self.enter_preparation_phase(first_fight=True, announce_opponent=True)
 
+    def _enemy_ai_style_label(self, ai_style):
+        style_label = ai_style.replace("bruiser", "Bruiser").replace("tricky", "Tricky Skirmisher")
+        style_label = style_label.replace("aggressive", "Aggressive Striker").replace("balanced", "Balanced Fighter")
+        return style_label
+
+    def refresh_enemy_preview(self):
+        if not hasattr(self, "enemy_preview_panel"):
+            return
+        show_preview = self.in_preparation and not self.in_combat and not self.awaiting_reward
+        if show_preview:
+            style_label = self._enemy_ai_style_label(self.enemy.ai_style)
+            flavor = self.enemy.flavor or "No scouting report available."
+            self.enemy_preview_var.set(
+                f"Name: {self.enemy.enemy_type}\n"
+                f"Level: {self.enemy.level}\n"
+                f"Attack: {self.enemy.attack}  Defense: {self.enemy.defense}\n"
+                f"Max HP: {self.enemy.max_health}\n"
+                f"AI Style: {style_label}\n\n"
+                f"{flavor}"
+            )
+            self.enemy_preview_panel.grid()
+        else:
+            self.enemy_preview_panel.grid_remove()
+
     def refresh_stats(self):
         self.player_health_var.set(f"HP: {self.player.health} / {self.player.max_health}")
         self.enemy_health_var.set(f"HP: {self.enemy.health} / {self.enemy.max_health}")
@@ -2496,8 +2788,7 @@ class BattleApp:
         self.player_equipment_var.set(self.equipment_summary_text())
         self.enemy_stats_var.set(f"Attack {self.enemy.attack}  Defense {self.enemy.defense}")
         self.enemy_banner_var.set(f"{self.enemy.enemy_type}  —  Level {self.enemy.level}")
-        style_label = self.enemy.ai_style.replace("bruiser", "Bruiser").replace("tricky", "Tricky Skirmisher")
-        style_label = style_label.replace("aggressive", "Aggressive Striker").replace("balanced", "Balanced Fighter")
+        style_label = self._enemy_ai_style_label(self.enemy.ai_style)
         self.enemy_type_var.set(f"Type: {style_label}")
         self.progress_level_var.set(f"Level: {self.player_level}")
         self.progress_xp_var.set(f"XP: {self.player_xp} / {self.player_level * 10}")
@@ -2508,6 +2799,7 @@ class BattleApp:
         self.player_bar["value"] = max(0, self.player.health)
         self.enemy_bar["maximum"] = self.enemy.max_health
         self.enemy_bar["value"] = max(0, self.enemy.health)
+        self.refresh_enemy_preview()
         self.refresh_character_panel()
         self.refresh_mercenary_panel()
         self.root.update_idletasks()
@@ -2527,6 +2819,10 @@ class BattleApp:
         attack = max(1, 6 + level + theme["attack_mod"])
         defense = max(0, 2 + (level - 1) // 2 + theme["defense_mod"])
         health = max(8, 24 + level * 5 + theme["health_mod"])
+        diff = self.get_difficulty_mods()
+        attack = max(1, attack + diff["attack_mod"])
+        defense = max(0, defense + diff["defense_mod"])
+        health = max(1, health + diff["health_mod"])
         return Combatant(
             f"{theme['name']} (Lv {level})",
             attack,
@@ -2612,6 +2908,7 @@ class BattleApp:
                 self.log(f"Reward: {label} — {detail}.")
             elif key == "coins":
                 self.coins += value
+                self.run_summary["total_coins_earned"] += value
                 self.log(f"Reward: {label} — {detail}.")
             elif key == "heal":
                 healed = min(value, self.player.max_health - self.player.health)
@@ -2754,10 +3051,17 @@ class BattleApp:
         if victory:
             xp_mult = float(self.battle_bonuses.get("xp_multiplier", 1.0))
             coin_bonus = int(self.battle_bonuses.get("coin_bonus", 0))
+            diff_coin_bonus = int(self.get_difficulty_mods()["coin_bonus"])
             xp_gain = max(1, int(self.enemy.level * xp_mult))
-            coin_gain = 5 + coin_bonus
+            coin_gain = 5 + coin_bonus + diff_coin_bonus
             self.player_xp += xp_gain
             self.coins += coin_gain
+            self.run_summary["enemies_defeated"] += 1
+            self.run_summary["highest_enemy_level_reached"] = max(
+                self.run_summary["highest_enemy_level_reached"], self.enemy.level
+            )
+            self.run_summary["total_xp_earned"] += xp_gain
+            self.run_summary["total_coins_earned"] += coin_gain
             remaining_hp = self.player.health
             self.log(
                 f"\nVictory over {self.enemy.enemy_type}! You gain {xp_gain} XP and {coin_gain} coins. "
@@ -2774,6 +3078,9 @@ class BattleApp:
             reward_options = self.build_reward_options()
             self.show_victory_reward_dialog(reward_options)
         else:
+            self.run_summary["final_player_level"] = self.player_level
+            self.run_summary["final_race"] = self.selected_race
+            self.run_summary["cause_of_defeat"] = self.enemy.enemy_type
             self.cancel_scheduled_fight()
             self.in_combat = False
             self.in_preparation = False
