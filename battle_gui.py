@@ -1060,7 +1060,7 @@ class BattleApp:
         self.action_hint = tk.StringVar(
             value="Swing trades blows, Block softens hits, Power Strike deals heavy damage (2-turn cooldown)."
         )
-        self.phase_info_var = tk.StringVar(value="Preparation: visit Town, then strike to begin.")
+        self.phase_info_var = tk.StringVar(value="Town is your hub. Enter Arena when ready to fight.")
         ttk.Label(info_panel, textvariable=self.status_var, font=("Segoe UI", 10, "bold"), wraplength=300).pack(
             anchor="nw", pady=(0, 6)
         )
@@ -1168,9 +1168,13 @@ class BattleApp:
         ttk.Label(self.town_frame, text="Town", font=("Segoe UI", 18, "bold")).pack(pady=(8, 4))
         ttk.Label(
             self.town_frame,
-            text="Prepare between duels — shop, recruit allies, review your character, and use healing items.",
+            text="Your hub between duels — shop, recruit allies, review your character, and choose destinations.",
             wraplength=520,
         ).pack(pady=(4, 10))
+
+        destinations = ttk.LabelFrame(self.town_frame, text="Destinations", padding=12)
+        destinations.pack(fill=tk.X, pady=6)
+        ttk.Button(destinations, text="Arena", command=self.open_arena, width=22).pack(anchor="w", pady=4)
 
         services = ttk.LabelFrame(self.town_frame, text="Services", padding=12)
         services.pack(fill=tk.X, pady=6)
@@ -1189,7 +1193,6 @@ class BattleApp:
 
         town_actions = ttk.Frame(self.town_frame)
         town_actions.pack(fill=tk.X, pady=(12, 0))
-        ttk.Button(town_actions, text="Return to Arena", command=self.close_town, width=18).pack(side=tk.LEFT)
         self.town_save_run_btn = ttk.Button(
             town_actions, text="Save Run", command=self.save_run_menu, state=tk.DISABLED
         )
@@ -2438,12 +2441,10 @@ class BattleApp:
 
     def close_recruit(self):
         if self.run_started:
-            self.show_battle_screen()
-            if self.in_preparation and not self.awaiting_reward:
-                self.status_var.set("Ready to engage")
-                self.phase_info_var.set(
-                    "Preparation phase — visit Town to prepare. Strike first when you are ready."
-                )
+            if self.can_visit_town():
+                self.show_town_screen()
+            else:
+                self.show_battle_screen()
         else:
             self.show_main_menu()
 
@@ -2623,16 +2624,14 @@ class BattleApp:
         self.town_frame.pack(fill=tk.BOTH, expand=True)
         self.update_town_buttons()
 
-    def close_town(self):
-        if self.run_started:
-            self.show_battle_screen()
-            if self.in_preparation and not self.awaiting_reward:
-                self.status_var.set("Ready to engage")
-                self.phase_info_var.set(
-                    "Preparation phase — visit Town to prepare. Strike first when you are ready."
-                )
-        else:
+    def open_arena(self):
+        if not self.run_started:
             self.show_main_menu()
+            return
+        self.show_battle_screen()
+        if self.in_preparation and not self.awaiting_reward:
+            self.status_var.set("Ready to engage")
+            self.phase_info_var.set("Enter the Arena and strike when you are ready to fight.")
 
     def update_town_button(self):
         if not hasattr(self, "town_btn"):
@@ -2673,6 +2672,19 @@ class BattleApp:
     def show_battle_screen(self):
         self.hide_all_screens()
         self.main_frame.pack(fill=tk.BOTH, expand=True)
+
+    def show_town_screen(self):
+        self.hide_all_screens()
+        self.town_frame.pack(fill=tk.BOTH, expand=True)
+        self.update_town_buttons()
+
+    def show_screen_for_current_phase(self):
+        if self.in_combat or self.awaiting_reward:
+            self.show_battle_screen()
+        elif self.can_visit_town():
+            self.show_town_screen()
+        else:
+            self.show_battle_screen()
 
     def close_auxiliary_windows(self):
         for attr in ("character_window", "game_over_window"):
@@ -3174,6 +3186,7 @@ class BattleApp:
         else:
             self.enter_preparation_phase()
             self.refresh_stats()
+        self.show_screen_for_current_phase()
 
     def load_run_from_file(self, slot):
         path = self.resolve_run_load_path(slot)
@@ -3218,12 +3231,14 @@ class BattleApp:
             return
         self.run_started = True
         self.update_menu_buttons()
-        self.show_battle_screen()
         self.log_box.configure(state=tk.NORMAL)
         self.log_box.delete(1.0, tk.END)
         self.log_box.configure(state=tk.DISABLED)
-        self.log("Saved run loaded. You return to the arena.")
         self.restore_run_phase_after_load()
+        if self.can_visit_town():
+            self.log("Saved run loaded. You return to Town.")
+        else:
+            self.log("Saved run loaded. You return to the Arena.")
         messagebox.showinfo("Run Loaded", f"Run loaded from slot {slot} ({os.path.basename(path)}).")
 
     def load_build_from_file(self, slot):
@@ -3372,7 +3387,6 @@ class BattleApp:
         self.run_started = True
         self.build_active = True
         self.update_menu_buttons()
-        self.show_battle_screen()
         self.log_box.configure(state=tk.NORMAL)
         self.log_box.delete(1.0, tk.END)
         self.log_box.configure(state=tk.DISABLED)
@@ -3380,10 +3394,10 @@ class BattleApp:
         self.log(
             f"A new run begins as a {self.selected_race} {role_label} warrior on {self.selected_difficulty} difficulty."
         )
-        self.log("Your chosen build is ready. The arena calls your name.")
-        self.log("Take your time in preparation — visit Town before each duel.")
-        self.log("Combat begins when you choose your first move.")
+        self.log("Your chosen build is ready. Town is your hub.")
+        self.log("Use Town services, then enter the Arena when you are ready to fight.")
         self.enter_preparation_phase(first_fight=True, announce_opponent=True)
+        self.show_town_screen()
 
     def init_run_summary(self):
         self.run_summary = {
@@ -3608,17 +3622,17 @@ class BattleApp:
         self.refresh_stats()
         if self.awaiting_reward:
             self.status_var.set("Victory! Choose your reward.")
-            self.phase_info_var.set("Pick a reward, then visit Town to prepare.")
+            self.phase_info_var.set("Pick a reward, then return to Town to prepare.")
         elif first_fight:
-            self.status_var.set("Ready to engage")
+            self.status_var.set("Ready in Town")
             self.phase_info_var.set(
-                f"{enemy_display_name(self.enemy)} stands across the arena. "
-                "Visit Town to prepare, then choose your first move."
+                f"{enemy_display_name(self.enemy)} awaits in the Arena. "
+                "Prepare in Town, then enter Arena when ready."
             )
         else:
-            self.status_var.set("Ready to engage")
+            self.status_var.set("Ready in Town")
             self.phase_info_var.set(
-                "Preparation phase — visit Town to prepare. Strike first when you are ready."
+                "Town is your hub. Enter the Arena and strike when you are ready to fight."
             )
         if announce_opponent and not self.awaiting_reward:
             self.log(f"\n{enemy_display_name(self.enemy)} awaits your challenge.")
@@ -3690,12 +3704,10 @@ class BattleApp:
 
     def close_shop(self):
         if self.run_started:
-            self.show_battle_screen()
-            if self.in_preparation and not self.awaiting_reward:
-                self.status_var.set("Ready to engage")
-                self.phase_info_var.set(
-                    "Preparation phase — visit Town to prepare. Strike first when you are ready."
-                )
+            if self.can_visit_town():
+                self.show_town_screen()
+            else:
+                self.show_battle_screen()
         else:
             self.show_main_menu()
 
@@ -3825,13 +3837,13 @@ class BattleApp:
             self.game_over_window = None
         self.reset_run_state()
         self.run_started = True
-        self.show_battle_screen()
         self.log_box.configure(state=tk.NORMAL)
         self.log_box.delete(1.0, tk.END)
         self.log_box.configure(state=tk.DISABLED)
         self.log("A fresh run begins.")
-        self.log("The arena is ready for another climb.")
+        self.log("Town is your hub. Enter the Arena when you are ready to fight.")
         self.enter_preparation_phase(first_fight=True, announce_opponent=True)
+        self.show_town_screen()
 
     def _enemy_ai_style_label(self, ai_style):
         style_label = ai_style.replace("bruiser", "Bruiser").replace("tricky", "Tricky Skirmisher")
@@ -4029,6 +4041,8 @@ class BattleApp:
             self.refresh_stats()
             dialog.destroy()
             self.maybe_offer_loot_drop()
+            if self.can_visit_town():
+                self.show_town_screen()
 
         for option in options:
             label, detail, _, _ = option
