@@ -11,8 +11,10 @@ POWER_STRIKE_BONUS = 3
 REST_HEAL_BETWEEN_FIGHTS = 3
 BLOCK_DAMAGE_REDUCTION = 4
 STALEMATE_CHIP_DAMAGE = 1
-RUN_SAVE_VERSION = 1
+RUN_SAVE_VERSION = 2
 BUILD_SAVE_VERSION = 2
+BUILD_SLOT_COUNT = 3
+RUN_SLOT_COUNT = 3
 RESET_STAT_COST = 100
 LOOT_DROP_CHANCE = 0.35
 ADMIN_CLICKS_REQUIRED = 3
@@ -351,6 +353,32 @@ def normalize_combat_role(role):
     return DEFAULT_COMBAT_ROLE
 
 
+REWARD_OPTION_KEYS = frozenset({"attack", "defense", "health", "coins", "heal", "wound"})
+
+
+def reward_options_to_json(options):
+    if not options:
+        return None
+    return [[label, detail, key, value] for label, detail, key, value in options]
+
+
+def reward_options_from_json(data):
+    if not isinstance(data, list):
+        return None
+    options = []
+    for entry in data:
+        if not isinstance(entry, list) or len(entry) != 4:
+            continue
+        label, detail, key, value = entry
+        if key not in REWARD_OPTION_KEYS:
+            continue
+        try:
+            options.append((str(label), str(detail), str(key), int(value)))
+        except (TypeError, ValueError):
+            continue
+    return options if len(options) >= 3 else None
+
+
 def mercenary_power_rating(template):
     """Rough power score used to scale hire and revive costs."""
     return template["attack"] + template["defense"] + template["health"] // 5
@@ -506,6 +534,7 @@ class BattleApp:
         self.admin_unlocked = True
         self.title_click_count = 0
         self.pending_loot_item = None
+        self.pending_reward_options = None
         self.run_summary = {}
 
         self.build_ui()
@@ -534,18 +563,21 @@ class BattleApp:
         menu_buttons = ttk.Frame(self.menu_frame)
         menu_buttons.pack()
         ttk.Button(menu_buttons, text="New Build", command=self.start_new_build, width=22).pack(pady=4)
-        ttk.Button(menu_buttons, text="Load Build", command=self.load_build_from_file, width=22).pack(pady=4)
+        self.load_build_btn = ttk.Button(
+            menu_buttons, text="Load Build", command=self.load_build_menu, state=tk.DISABLED, width=22
+        )
+        self.load_build_btn.pack(pady=4)
         self.save_build_btn = ttk.Button(
-            menu_buttons, text="Save Build", command=self.save_build_to_file, state=tk.DISABLED, width=22
+            menu_buttons, text="Save Build", command=self.save_build_menu, state=tk.DISABLED, width=22
         )
         self.save_build_btn.pack(pady=4)
         ttk.Separator(menu_buttons, orient="horizontal").pack(fill=tk.X, pady=8)
         self.save_run_btn = ttk.Button(
-            menu_buttons, text="Save Run", command=self.save_run_to_file, state=tk.DISABLED, width=22
+            menu_buttons, text="Save Run", command=self.save_run_menu, state=tk.DISABLED, width=22
         )
         self.save_run_btn.pack(pady=4)
         self.load_run_btn = ttk.Button(
-            menu_buttons, text="Load Run", command=self.load_run_from_file, state=tk.DISABLED, width=22
+            menu_buttons, text="Load Run", command=self.load_run_menu, state=tk.DISABLED, width=22
         )
         self.load_run_btn.pack(pady=4)
         ttk.Button(menu_buttons, text="Quit", command=self.quit_game, width=22).pack(pady=4)
@@ -850,7 +882,7 @@ class BattleApp:
         self.main_menu_btn = ttk.Button(footer, text="Main Menu", command=self.return_to_main_menu)
         self.main_menu_btn.pack(side=tk.LEFT, padx=4)
         self.save_run_footer_btn = ttk.Button(
-            footer, text="Save Run", command=self.save_run_to_file, state=tk.DISABLED
+            footer, text="Save Run", command=self.save_run_menu, state=tk.DISABLED
         )
         self.save_run_footer_btn.pack(side=tk.LEFT, padx=4)
         self.character_btn = ttk.Button(footer, text="Character", command=self.open_character_panel, state=tk.DISABLED)
@@ -1913,10 +1945,10 @@ class BattleApp:
         if hasattr(self, "save_build_btn"):
             self.save_build_btn.configure(state=tk.NORMAL if self.build_active else tk.DISABLED)
         self.update_save_run_buttons()
+        if hasattr(self, "load_build_btn"):
+            self.load_build_btn.configure(state=tk.NORMAL if self.any_build_slot_exists() else tk.DISABLED)
         if hasattr(self, "load_run_btn"):
-            self.load_run_btn.configure(
-                state=tk.NORMAL if os.path.exists(self.run_save_path) else tk.DISABLED
-            )
+            self.load_run_btn.configure(state=tk.NORMAL if self.any_run_slot_exists() else tk.DISABLED)
         if self.run_started and self.player.alive():
             self.menu_status_var.set("Run in progress. Load Run to resume, or start a New Build.")
         elif self.build_active:
@@ -1944,7 +1976,7 @@ class BattleApp:
             choice = messagebox.askyesnocancel(title, prompt)
             if choice is None:
                 return False
-            if choice and not self.save_run_to_file(show_message=True):
+            if choice and not self.save_run_menu(show_message=True):
                 return False
         return True
 
@@ -1983,6 +2015,168 @@ class BattleApp:
             return
         self.root.destroy()
 
+    def _game_dir(self):
+        return os.path.dirname(__file__)
+
+    def build_slot_path(self, slot):
+        return os.path.join(self._game_dir(), f"saved_build_slot{slot}.json")
+
+    def run_slot_path(self, slot):
+        return os.path.join(self._game_dir(), f"player_run_slot{slot}.json")
+
+    def resolve_build_load_path(self, slot):
+        path = self.build_slot_path(slot)
+        if os.path.exists(path):
+            return path
+        if slot == 1:
+            if os.path.exists(self.build_save_path):
+                return self.build_save_path
+            if os.path.exists(self.save_path):
+                return self.save_path
+        return None
+
+    def resolve_run_load_path(self, slot):
+        path = self.run_slot_path(slot)
+        if os.path.exists(path):
+            return path
+        if slot == 1 and os.path.exists(self.run_save_path):
+            return self.run_save_path
+        return None
+
+    def build_slot_exists(self, slot):
+        return self.resolve_build_load_path(slot) is not None
+
+    def run_slot_exists(self, slot):
+        return self.resolve_run_load_path(slot) is not None
+
+    def any_build_slot_exists(self):
+        return any(self.build_slot_exists(slot) for slot in range(1, BUILD_SLOT_COUNT + 1))
+
+    def any_run_slot_exists(self):
+        return any(self.run_slot_exists(slot) for slot in range(1, RUN_SLOT_COUNT + 1))
+
+    def describe_build_slot(self, slot):
+        path = self.resolve_build_load_path(slot)
+        if not path:
+            return "Empty"
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                data = json.load(handle)
+        except (OSError, json.JSONDecodeError):
+            return "Corrupt save"
+        if not isinstance(data, dict):
+            return "Corrupt save"
+        race = data.get("race", "Human")
+        attack = data.get("attack", "?")
+        defense = data.get("defense", "?")
+        health = data.get("health", "?")
+        role = format_combat_role(normalize_combat_role(data.get("combat_role", DEFAULT_COMBAT_ROLE)))
+        difficulty = data.get("difficulty", DEFAULT_DIFFICULTY)
+        if difficulty not in DIFFICULTIES:
+            difficulty = DEFAULT_DIFFICULTY
+        return f"{race}, {attack}/{defense}/{health}, {role}, {difficulty}"
+
+    def describe_run_slot(self, slot):
+        path = self.resolve_run_load_path(slot)
+        if not path:
+            return "Empty"
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                data = json.load(handle)
+        except (OSError, json.JSONDecodeError):
+            return "Corrupt save"
+        if not isinstance(data, dict):
+            return "Corrupt save"
+        build = data.get("build", {})
+        run = data.get("run", {})
+        race = build.get("race", "Human")
+        level = run.get("player_level", "?")
+        defeated = run.get("run_summary", {}).get("enemies_defeated", 0)
+        if run.get("in_combat"):
+            phase = "mid-fight"
+        elif run.get("awaiting_reward"):
+            phase = "reward pending"
+        else:
+            phase = "preparation"
+        return f"L{level} {race}, {defeated} foes, {phase}"
+
+    def _prompt_slot_picker(self, title, kind, mode):
+        """kind: 'build' or 'run'; mode: 'save' or 'load'. Returns slot 1-3 or None."""
+        slot_count = BUILD_SLOT_COUNT if kind == "build" else RUN_SLOT_COUNT
+        describe = self.describe_build_slot if kind == "build" else self.describe_run_slot
+        exists_fn = self.build_slot_exists if kind == "build" else self.run_slot_exists
+
+        dialog = tk.Toplevel(self.root)
+        dialog.title(title)
+        dialog.geometry("420x260")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        ttk.Label(dialog, text=title, font=("Segoe UI", 12, "bold")).pack(pady=(12, 6))
+        ttk.Label(dialog, text="Choose a slot:").pack(pady=(0, 8))
+
+        result = {"slot": None}
+
+        def choose(slot):
+            summary = describe(slot)
+            if mode == "load":
+                if not exists_fn(slot):
+                    messagebox.showinfo("Empty Slot", f"Slot {slot} is empty.", parent=dialog)
+                    return
+            elif exists_fn(slot):
+                if not messagebox.askyesno(
+                    "Overwrite Save?",
+                    f"Slot {slot} already has a save:\n{summary}\n\nOverwrite it?",
+                    parent=dialog,
+                ):
+                    return
+            result["slot"] = slot
+            dialog.destroy()
+
+        for slot in range(1, slot_count + 1):
+            summary = describe(slot)
+            occupied = exists_fn(slot)
+            if mode == "load" and not occupied:
+                ttk.Button(
+                    dialog,
+                    text=f"Slot {slot} — Empty",
+                    state=tk.DISABLED,
+                ).pack(fill=tk.X, padx=24, pady=3)
+            else:
+                label = f"Slot {slot} — {summary}"
+                ttk.Button(dialog, text=label, command=lambda s=slot: choose(s)).pack(fill=tk.X, padx=24, pady=3)
+
+        ttk.Button(dialog, text="Cancel", command=dialog.destroy).pack(pady=(10, 12))
+        dialog.wait_window()
+        return result["slot"]
+
+    def save_build_menu(self, show_message=True):
+        slot = self._prompt_slot_picker("Save Build", "build", "save")
+        if not slot:
+            return False
+        return self.save_build_to_file(slot, show_message=show_message)
+
+    def load_build_menu(self):
+        if not self.any_build_slot_exists():
+            messagebox.showinfo("No Build Found", "No saved build was found yet.")
+            return
+        slot = self._prompt_slot_picker("Load Build", "build", "load")
+        if slot:
+            self.load_build_from_file(slot)
+
+    def save_run_menu(self, show_message=True):
+        slot = self._prompt_slot_picker("Save Run", "run", "save")
+        if not slot:
+            return False
+        return self.save_run_to_file(slot, show_message=show_message)
+
+    def load_run_menu(self):
+        if not self.any_run_slot_exists():
+            messagebox.showinfo("No Run Found", "No saved run was found yet.")
+            return
+        slot = self._prompt_slot_picker("Load Run", "run", "load")
+        if slot:
+            self.load_run_from_file(slot)
+
     def build_build_save_data(self):
         """Full character build: race, point allocation, and current equipment."""
         return {
@@ -1996,33 +2190,25 @@ class BattleApp:
             "equipment": {slot: (dict(item) if item else None) for slot, item in self.equipment.items()},
         }
 
-    def save_build_to_file(self, show_message=True):
+    def save_build_to_file(self, slot, show_message=True):
         if not self.build_active:
             if show_message:
                 messagebox.showinfo("Save Build", "Create or load a build before saving.")
             return False
+        if slot < 1 or slot > BUILD_SLOT_COUNT:
+            return False
         data = self.build_build_save_data()
+        path = self.build_slot_path(slot)
         try:
-            with open(self.build_save_path, "w", encoding="utf-8") as handle:
+            with open(path, "w", encoding="utf-8") as handle:
                 json.dump(data, handle, indent=2)
-            # Legacy simple file for backward compatibility.
-            with open(self.save_path, "w", encoding="utf-8") as handle:
-                json.dump(
-                    {
-                        "race": data["race"],
-                        "attack": data["attack"],
-                        "defense": data["defense"],
-                        "health": data["health"],
-                    },
-                    handle,
-                    indent=2,
-                )
         except OSError as exc:
             if show_message:
                 messagebox.showerror("Save Build", f"Could not save build:\n{exc}")
             return False
+        self.update_menu_buttons()
         if show_message:
-            messagebox.showinfo("Build Saved", f"Build saved to {os.path.basename(self.build_save_path)}.")
+            messagebox.showinfo("Build Saved", f"Build saved to slot {slot} ({os.path.basename(path)}).")
         return True
 
     def mercenary_to_dict(self, mercenary):
@@ -2112,17 +2298,25 @@ class BattleApp:
                 "recruitment_pool": [t["id"] for t in self.recruitment_pool],
                 "enemy": self.enemy_to_dict(),
                 "awaiting_reward": self.awaiting_reward,
+                "in_combat": self.in_combat,
+                "in_preparation": self.in_preparation,
+                "awaiting_first_strike": self.awaiting_first_strike,
+                "pending_reward_options": reward_options_to_json(self.pending_reward_options),
+                "player_damage_reduction_next": self._player_damage_reduction_next,
                 "run_summary": dict(self.run_summary),
             },
         }
 
-    def save_run_to_file(self, show_message=True):
+    def save_run_to_file(self, slot, show_message=True):
         if not self.run_started or not self.player.alive():
             if show_message:
                 messagebox.showinfo("Save Run", "Start a run and survive before saving progress.")
             return False
+        if slot < 1 or slot > RUN_SLOT_COUNT:
+            return False
+        path = self.run_slot_path(slot)
         try:
-            with open(self.run_save_path, "w", encoding="utf-8") as handle:
+            with open(path, "w", encoding="utf-8") as handle:
                 json.dump(self.build_run_save_data(), handle, indent=2)
         except OSError as exc:
             if show_message:
@@ -2130,12 +2324,16 @@ class BattleApp:
             return False
         self.update_menu_buttons()
         if show_message:
-            messagebox.showinfo("Run Saved", f"Run saved to {os.path.basename(self.run_save_path)}.")
+            messagebox.showinfo("Run Saved", f"Run saved to slot {slot} ({os.path.basename(path)}).")
         return True
 
     def apply_run_save_data(self, data):
+        save_version = int(data.get("version", 1))
         build = data.get("build", {})
         run = data.get("run", {})
+        has_phase_fields = save_version >= 2 or any(
+            key in run for key in ("in_combat", "in_preparation", "awaiting_first_strike")
+        )
         race = build.get("race", "Human")
         if race not in RACES:
             race = "Human"
@@ -2168,6 +2366,23 @@ class BattleApp:
         self.power_strike_cooldown = int(run.get("power_strike_cooldown", 0))
         self.next_enemy_wounded = bool(run.get("next_enemy_wounded", False))
         self.awaiting_reward = bool(run.get("awaiting_reward", False))
+        self.in_combat = bool(run.get("in_combat", False))
+        self.in_preparation = bool(run.get("in_preparation", not self.in_combat))
+        self.awaiting_first_strike = bool(run.get("awaiting_first_strike", False))
+        self._player_damage_reduction_next = bool(run.get("player_damage_reduction_next", False))
+        self.pending_reward_options = reward_options_from_json(run.get("pending_reward_options"))
+        if self.in_combat:
+            self.awaiting_reward = False
+            self.awaiting_first_strike = False
+            self.in_preparation = False
+        elif self.awaiting_reward:
+            self.in_combat = False
+            self.awaiting_first_strike = False
+            self.in_preparation = True
+        elif not has_phase_fields:
+            self.in_combat = False
+            self.in_preparation = True
+            self.awaiting_first_strike = True
         self.enemy = self.enemy_from_dict(run["enemy"])
         self.active_mercenaries = []
         for merc_data in run.get("active_mercenaries", []):
@@ -2195,18 +2410,40 @@ class BattleApp:
             "final_race": saved_summary.get("final_race", self.selected_race),
             "cause_of_defeat": saved_summary.get("cause_of_defeat", ""),
         }
-        self.in_combat = False
-        self.in_preparation = False
-        self.awaiting_first_strike = False
-        self._player_damage_reduction_next = False
         self.cancel_scheduled_fight()
 
-    def load_run_from_file(self):
-        if not os.path.exists(self.run_save_path):
-            messagebox.showinfo("No Run Found", "No saved run was found yet.")
+    def restore_run_phase_after_load(self):
+        self.cancel_scheduled_fight()
+        self.play_again_btn.configure(state=tk.DISABLED)
+        self.main_menu_btn.configure(state=tk.NORMAL)
+        self.character_btn.configure(state=tk.NORMAL)
+        self.update_save_run_buttons()
+
+        if self.in_combat:
+            self.shop_btn.configure(state=tk.DISABLED)
+            self.recruit_btn.configure(state=tk.DISABLED)
+            self.set_action_buttons_for_phase()
+            self.status_var.set(f"Duel underway against {self.enemy.enemy_type}.")
+            self.phase_info_var.set("Mercenaries act automatically after your move each turn.")
+            self.refresh_stats()
+        elif self.awaiting_reward:
+            self.enter_preparation_phase()
+            self.log("Choose your victory reward before preparing for the next duel.")
+            options = self.pending_reward_options
+            if not options:
+                options = self.build_reward_options()
+            self.show_victory_reward_dialog(options)
+        else:
+            self.enter_preparation_phase()
+            self.refresh_stats()
+
+    def load_run_from_file(self, slot):
+        path = self.resolve_run_load_path(slot)
+        if not path:
+            messagebox.showinfo("No Run Found", f"Slot {slot} is empty.")
             return
         try:
-            with open(self.run_save_path, "r", encoding="utf-8") as handle:
+            with open(path, "r", encoding="utf-8") as handle:
                 data = json.load(handle)
         except OSError as exc:
             messagebox.showerror("Load Run", f"Could not read the save file:\n{exc}")
@@ -2217,7 +2454,7 @@ class BattleApp:
         if not isinstance(data, dict):
             messagebox.showerror("Load Run", "The saved run file is corrupt or malformed.")
             return
-        if data.get("version") != RUN_SAVE_VERSION:
+        if data.get("version") not in (1, RUN_SAVE_VERSION):
             messagebox.showinfo("Load Run", "This save file is from an incompatible version.")
             return
         build = data.get("build", {})
@@ -2248,18 +2485,13 @@ class BattleApp:
         self.log_box.delete(1.0, tk.END)
         self.log_box.configure(state=tk.DISABLED)
         self.log("Saved run loaded. You return to the arena.")
-        if self.awaiting_reward:
-            self.enter_preparation_phase()
-            self.log("Choose your victory reward before preparing for the next duel.")
-            self.show_victory_reward_dialog(self.build_reward_options())
-        else:
-            self.enter_preparation_phase(announce_opponent=True)
-        messagebox.showinfo("Run Loaded", f"Run loaded from {os.path.basename(self.run_save_path)}.")
+        self.restore_run_phase_after_load()
+        messagebox.showinfo("Run Loaded", f"Run loaded from slot {slot} ({os.path.basename(path)}).")
 
-    def load_build_from_file(self):
-        path = self.build_save_path if os.path.exists(self.build_save_path) else self.save_path
-        if not os.path.exists(path):
-            messagebox.showinfo("No Build Found", "No saved build was found yet.")
+    def load_build_from_file(self, slot):
+        path = self.resolve_build_load_path(slot)
+        if not path:
+            messagebox.showinfo("No Build Found", f"Slot {slot} is empty.")
             return
         try:
             with open(path, "r", encoding="utf-8") as handle:
@@ -2504,7 +2736,7 @@ class BattleApp:
             text=f"Reset Stats ({RESET_STAT_COST} coins)",
             command=self.open_reset_stats_dialog,
         ).pack(side=tk.LEFT, padx=4)
-        ttk.Button(actions, text="Save Build", command=self.save_build_to_file).pack(side=tk.LEFT, padx=4)
+        ttk.Button(actions, text="Save Build", command=self.save_build_menu).pack(side=tk.LEFT, padx=4)
         ttk.Button(actions, text="Close", command=self.character_window.destroy).pack(side=tk.RIGHT, padx=4)
         self.refresh_character_panel()
 
@@ -3048,6 +3280,7 @@ class BattleApp:
             if key in {"attack", "defense", "health"}:
                 self.apply_player_stats(heal_missing_max=True)
             self.awaiting_reward = False
+            self.pending_reward_options = None
             self.refresh_stats()
             dialog.destroy()
             self.maybe_offer_loot_drop()
@@ -3203,8 +3436,8 @@ class BattleApp:
             self.awaiting_reward = True
             self.enter_preparation_phase()
             self.log(f"A stronger challenger awaits: {self.enemy.enemy_type}.")
-            reward_options = self.build_reward_options()
-            self.show_victory_reward_dialog(reward_options)
+            self.pending_reward_options = self.build_reward_options()
+            self.show_victory_reward_dialog(self.pending_reward_options)
         else:
             self.run_summary["final_player_level"] = self.player_level
             self.run_summary["final_race"] = self.selected_race

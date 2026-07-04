@@ -1,0 +1,9 @@
+saved_build.json
+saved_build_slot*.json
+player_build.json
+player_run.json
+player_run_slot*.json
+high_scores.json
+game_custom.json
+__pycache__/
+*.pyc
