@@ -1,38 +1,33 @@
 {
-  "version": 1,
+  "version": 2,
   "build": {
     "race": "Human",
-    "attack": 3,
-    "defense": 4,
-    "health": 8
+    "attack": 6,
+    "defense": 5,
+    "health": 4,
+    "difficulty": "Normal",
+    "combat_role": "melee"
   },
   "run": {
-    "player_level": 2,
-    "player_xp": 5,
-    "coins": 7,
-    "enemy_level": 6,
+    "player_level": 1,
+    "player_xp": 0,
+    "coins": 10,
+    "enemy_level": 1,
     "stat_bonuses": {
-      "attack": 3,
-      "defense": 2,
-      "health": 12
+      "attack": 0,
+      "defense": 0,
+      "health": 0
     },
     "power_strike_cooldown": 0,
-    "next_enemy_wounded": true,
-    "player_health": 69,
+    "next_enemy_wounded": false,
+    "player_health": 44,
     "equipment": {
-      "head": {
-        "id": "steel_helm",
-        "name": "Steel Helm",
-        "slot": "head",
-        "defense": 2,
-        "price": 14
-      },
+      "head": null,
       "chest": {
-        "id": "chainmail",
-        "name": "Chainmail",
+        "id": "worn_tunic",
+        "name": "Worn Tunic",
         "slot": "chest",
-        "defense": 3,
-        "price": 22
+        "defense": 1
       },
       "legs": null,
       "arms": null,
@@ -52,39 +47,40 @@
       "ring2": null,
       "amulet": null
     },
-    "inventory": [
-      {
-        "id": "worn_tunic",
-        "name": "Worn Tunic",
-        "slot": "chest",
-        "defense": 1
-      },
-      {
-        "id": "steel_helm",
-        "name": "Steel Helm",
-        "slot": "head",
-        "defense": 2,
-        "price": 14
-      }
-    ],
+    "inventory": [],
     "active_mercenaries": [],
     "fallen_mercenaries": [],
     "recruitment_pool": [
-      "thornback",
-      "shade",
-      "ironjaw"
+      "ironjaw",
+      "grimhold",
+      "swiftarrow"
     ],
     "enemy": {
-      "name": "Giant Spider (Lv 6)",
-      "attack": 13,
-      "defense": 4,
-      "health": 52,
-      "max_health": 52,
-      "level": 6,
-      "flavor": "A giant spider descends on glistening thread, legs clicking on stone.",
-      "ai_style": "tricky",
-      "enemy_type": "Giant Spider"
+      "name": "Scrawny Rat (Lv 1)",
+      "attack": 8,
+      "defense": 1,
+      "health": 10,
+      "max_health": 22,
+      "level": 1,
+      "flavor": "A scrawny rat darts from the rubble, teeth bared and tail lashing.",
+      "ai_style": "aggressive",
+      "enemy_type": "Scrawny Rat",
+      "combat_role": "melee"
     },
-    "awaiting_reward": false
+    "awaiting_reward": false,
+    "in_combat": true,
+    "in_preparation": false,
+    "awaiting_first_strike": false,
+    "pending_reward_options": null,
+    "player_damage_reduction_next": false,
+    "run_summary": {
+      "enemies_defeated": 0,
+      "highest_enemy_level_reached": 0,
+      "total_coins_earned": 0,
+      "total_xp_earned": 0,
+      "final_player_level": 1,
+      "final_race": "Human",
+      "cause_of_defeat": ""
+    }
   }
 }
