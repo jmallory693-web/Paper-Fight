@@ -178,6 +178,14 @@ CONSUMABLE_EFFECT_TYPES = (
     "next_hit_reduction",
 )
 CONSUMABLE_TIMINGS = ("combat", "preparation", "both")
+CONSUMABLE_CATEGORIES = ("healing", "damage", "buff", "debuff", "other")
+SHOP_CONSUMABLE_TABS = [
+    ("healing", "Healing"),
+    ("damage", "Damage"),
+    ("buff", "Buff"),
+    ("debuff", "Debuff"),
+    ("other", "Other"),
+]
 
 SHOP_CONSUMABLES = [
     {
@@ -188,6 +196,7 @@ SHOP_CONSUMABLES = [
         "power": 10,
         "description": "Restores 10 HP.",
         "timing": "both",
+        "category": "healing",
     },
     {
         "id": "greater_health_potion",
@@ -197,6 +206,7 @@ SHOP_CONSUMABLES = [
         "power": 25,
         "description": "Restores 25 HP.",
         "timing": "both",
+        "category": "healing",
     },
     {
         "id": "field_salve",
@@ -206,6 +216,7 @@ SHOP_CONSUMABLES = [
         "power": 6,
         "description": "Restores 6 HP.",
         "timing": "both",
+        "category": "healing",
     },
     {
         "id": "fire_bomb",
@@ -215,6 +226,7 @@ SHOP_CONSUMABLES = [
         "power": 10,
         "description": "Deals 10 damage to the enemy.",
         "timing": "combat",
+        "category": "damage",
     },
     {
         "id": "acid_flask",
@@ -224,6 +236,7 @@ SHOP_CONSUMABLES = [
         "power": 7,
         "description": "Deals 7 damage to the enemy.",
         "timing": "combat",
+        "category": "damage",
     },
     {
         "id": "throwing_knife",
@@ -233,6 +246,7 @@ SHOP_CONSUMABLES = [
         "power": 5,
         "description": "Deals 5 damage to the enemy.",
         "timing": "combat",
+        "category": "damage",
     },
     {
         "id": "ironbark_salve",
@@ -242,6 +256,7 @@ SHOP_CONSUMABLES = [
         "power": 2,
         "description": "+2 Defense for the current fight.",
         "timing": "combat",
+        "category": "buff",
     },
     {
         "id": "battle_tonic",
@@ -251,6 +266,7 @@ SHOP_CONSUMABLES = [
         "power": 2,
         "description": "+2 Attack for the current fight.",
         "timing": "combat",
+        "category": "buff",
     },
     {
         "id": "focus_draught",
@@ -260,6 +276,7 @@ SHOP_CONSUMABLES = [
         "power": 1,
         "description": "Reduces Power Strike cooldown by 1.",
         "timing": "combat",
+        "category": "buff",
     },
     {
         "id": "smoke_bomb",
@@ -269,6 +286,7 @@ SHOP_CONSUMABLES = [
         "power": 3,
         "description": "Softens the next enemy hit by 3.",
         "timing": "combat",
+        "category": "buff",
     },
 ]
 
@@ -552,6 +570,26 @@ def get_consumable_template(consumable_id, templates=None):
         if template.get("id") == consumable_id:
             return template
     return None
+
+
+def normalize_consumable_category(value):
+    if value in CONSUMABLE_CATEGORIES:
+        return value
+    return "other"
+
+
+def consumable_category_for(template):
+    category = template.get("category")
+    if category in CONSUMABLE_CATEGORIES:
+        return category
+    effect_type = template.get("effect_type", "")
+    if effect_type == "heal":
+        return "healing"
+    if effect_type == "damage":
+        return "damage"
+    if effect_type in ("attack_boost", "defense_boost", "cooldown_reduce", "next_hit_reduction"):
+        return "buff"
+    return "other"
 
 
 def merge_custom_lists(base_list, custom_list, key="id"):
@@ -1081,8 +1119,14 @@ class BattleApp:
         ).pack(pady=(4, 10))
 
         consumables_section = ttk.LabelFrame(self.shop_frame, text="Consumables", padding=8)
-        consumables_section.pack(fill=tk.X, pady=6)
-        self.shop_consumables_frame = self._build_scrollable_list_frame(consumables_section)
+        consumables_section.pack(fill=tk.BOTH, expand=True, pady=6)
+        self.shop_consumables_notebook = ttk.Notebook(consumables_section)
+        self.shop_consumables_notebook.pack(fill=tk.BOTH, expand=True)
+        self.shop_consumables_tab_frames = {}
+        for tab_key, label in SHOP_CONSUMABLE_TABS:
+            tab = ttk.Frame(self.shop_consumables_notebook, padding=6)
+            self.shop_consumables_notebook.add(tab, text=label)
+            self.shop_consumables_tab_frames[tab_key] = self._build_scrollable_list_frame(tab)
 
         gear_section = ttk.LabelFrame(self.shop_frame, text="Equipment", padding=8)
         gear_section.pack(fill=tk.BOTH, expand=True, pady=6)
@@ -1233,6 +1277,7 @@ class BattleApp:
             ("Power", "power", "10"),
             ("Description", "description", "A custom consumable."),
             ("Timing", "timing", "both"),
+            ("Category", "category", "healing"),
         ]
         for idx, (label, key, default) in enumerate(consumable_defaults):
             ttk.Label(consumable_form, text=label).grid(row=idx, column=0, sticky="w", pady=2)
@@ -1441,6 +1486,7 @@ class BattleApp:
                 "description": self.admin_consumable_fields["description"].get().strip(),
                 "timing": self.admin_consumable_fields["timing"].get().strip(),
             }
+            category_raw = self.admin_consumable_fields["category"].get().strip()
         except ValueError:
             messagebox.showinfo("Admin", "Consumable cost and power must be numbers.")
             return
@@ -1456,6 +1502,13 @@ class BattleApp:
         if entry["timing"] not in CONSUMABLE_TIMINGS:
             messagebox.showinfo("Admin", "Timing must be combat, preparation, or both.")
             return
+        if category_raw:
+            if category_raw not in CONSUMABLE_CATEGORIES:
+                messagebox.showinfo("Admin", "Category must be healing, damage, buff, debuff, or other.")
+                return
+            entry["category"] = category_raw
+        else:
+            entry["category"] = consumable_category_for(entry)
         base_ids = {item["id"] for item in SHOP_CONSUMABLES}
         custom = self._read_custom_file_lists()
         custom_ids = {item.get("id") for item in custom["custom_consumables"]}
@@ -1695,28 +1748,46 @@ class BattleApp:
                 ).pack(side=tk.RIGHT, padx=(8, 0))
 
     def refresh_shop_consumables_list(self):
-        if not hasattr(self, "shop_consumables_frame"):
+        if not hasattr(self, "shop_consumables_tab_frames"):
             return
-        for child in self.shop_consumables_frame.winfo_children():
-            child.destroy()
 
+        grouped = {tab_key: [] for tab_key in self.shop_consumables_tab_frames}
         for item in self.shop_consumables:
-            row = ttk.Frame(self.shop_consumables_frame)
-            row.pack(fill=tk.X, pady=4)
-            info = ttk.Frame(row)
-            info.pack(side=tk.LEFT, anchor="w", fill=tk.X, expand=True)
-            owned = self.consumable_quantity(item["id"])
-            owned_text = f"  (owned: {owned})" if owned else ""
-            ttk.Label(
-                info,
-                text=f"{item['name']} — {item['cost']} coins — {item.get('description', '')}{owned_text}",
-                wraplength=360,
-            ).pack(anchor="w")
-            ttk.Button(
-                row,
-                text=f"Buy ({item['cost']})",
-                command=lambda consumable=item: self.buy_consumable(consumable),
-            ).pack(side=tk.RIGHT, padx=(8, 0))
+            category = consumable_category_for(item)
+            if category not in grouped:
+                category = "other"
+            grouped[category].append(item)
+
+        for tab_key, frame in self.shop_consumables_tab_frames.items():
+            for child in frame.winfo_children():
+                child.destroy()
+
+            items = grouped.get(tab_key, [])
+            if not items:
+                ttk.Label(
+                    frame,
+                    text="No consumables in this category.",
+                    wraplength=420,
+                ).pack(anchor="w")
+                continue
+
+            for item in items:
+                row = ttk.Frame(frame)
+                row.pack(fill=tk.X, pady=4)
+                info = ttk.Frame(row)
+                info.pack(side=tk.LEFT, anchor="w", fill=tk.X, expand=True)
+                owned = self.consumable_quantity(item["id"])
+                owned_text = f"  (owned: {owned})" if owned else ""
+                ttk.Label(
+                    info,
+                    text=f"{item['name']} — {item['cost']} coins — {item.get('description', '')}{owned_text}",
+                    wraplength=360,
+                ).pack(anchor="w")
+                ttk.Button(
+                    row,
+                    text=f"Buy ({item['cost']})",
+                    command=lambda consumable=item: self.buy_consumable(consumable),
+                ).pack(side=tk.RIGHT, padx=(8, 0))
 
     def log(self, text):
         self.log_box.configure(state=tk.NORMAL)
