@@ -21,6 +21,16 @@ BASE_ATTACK = 6
 BASE_DEFENSE = 2
 BASE_HEALTH = 25
 
+ROLE_ADVANTAGE_BONUS = 2
+COMBAT_ROLES = ("melee", "ranged", "cavalry")
+ROLE_BEATS = {"ranged": "melee", "melee": "cavalry", "cavalry": "ranged"}
+DEFAULT_COMBAT_ROLE = "melee"
+COMBAT_ROLE_DESCS = {
+    "melee": "Front-line fighter. Beats Cavalry.",
+    "ranged": "Strikes from distance. Beats Melee.",
+    "cavalry": "Fast striker. Beats Ranged.",
+}
+
 DIFFICULTIES = {
     "Easy": {
         "attack_mod": -1,
@@ -140,6 +150,7 @@ ENEMY_THEMES = [
         "defense_mod": -1,
         "health_mod": -7,
         "ai_style": "aggressive",
+        "combat_role": "melee",
     },
     {
         "name": "Feral Cat",
@@ -149,6 +160,7 @@ ENEMY_THEMES = [
         "defense_mod": 0,
         "health_mod": -5,
         "ai_style": "aggressive",
+        "combat_role": "melee",
     },
     {
         "name": "Goblin Scout",
@@ -158,6 +170,7 @@ ENEMY_THEMES = [
         "defense_mod": 1,
         "health_mod": -3,
         "ai_style": "tricky",
+        "combat_role": "ranged",
     },
     {
         "name": "Giant Spider",
@@ -167,6 +180,7 @@ ENEMY_THEMES = [
         "defense_mod": 0,
         "health_mod": -2,
         "ai_style": "tricky",
+        "combat_role": "melee",
     },
     {
         "name": "Wolf",
@@ -176,6 +190,7 @@ ENEMY_THEMES = [
         "defense_mod": 0,
         "health_mod": 0,
         "ai_style": "balanced",
+        "combat_role": "cavalry",
     },
     {
         "name": "Bandit Raider",
@@ -185,6 +200,7 @@ ENEMY_THEMES = [
         "defense_mod": 0,
         "health_mod": 2,
         "ai_style": "balanced",
+        "combat_role": "melee",
     },
     {
         "name": "Orc Brute",
@@ -194,6 +210,7 @@ ENEMY_THEMES = [
         "defense_mod": 1,
         "health_mod": 5,
         "ai_style": "bruiser",
+        "combat_role": "melee",
     },
     {
         "name": "Cave Troll",
@@ -203,6 +220,7 @@ ENEMY_THEMES = [
         "defense_mod": 2,
         "health_mod": 8,
         "ai_style": "bruiser",
+        "combat_role": "melee",
     },
 ]
 
@@ -224,6 +242,7 @@ MERCENARY_TEMPLATES = [
         "ability": "fortify",
         "ability_desc": "Fortify: brace and recover 3 HP.",
         "ai_style": "defensive",
+        "combat_role": "melee",
     },
     {
         "id": "swiftarrow",
@@ -236,6 +255,7 @@ MERCENARY_TEMPLATES = [
         "ability": "volley",
         "ability_desc": "Volley: ranged strike ignores 2 defense.",
         "ai_style": "aggressive",
+        "combat_role": "ranged",
     },
     {
         "id": "ironjaw",
@@ -248,6 +268,7 @@ MERCENARY_TEMPLATES = [
         "ability": "fury",
         "ability_desc": "Fury: reckless swing for +4 damage.",
         "ai_style": "aggressive",
+        "combat_role": "melee",
     },
     {
         "id": "mira_leaf",
@@ -260,6 +281,7 @@ MERCENARY_TEMPLATES = [
         "ability": "mend",
         "ability_desc": "Mend: restore 6 HP to you or an ally.",
         "ai_style": "support",
+        "combat_role": "ranged",
     },
     {
         "id": "shade",
@@ -272,6 +294,7 @@ MERCENARY_TEMPLATES = [
         "ability": "ambush",
         "ability_desc": "Ambush: bonus damage when the foe is wounded.",
         "ai_style": "tricky",
+        "combat_role": "cavalry",
     },
     {
         "id": "thornback",
@@ -284,6 +307,7 @@ MERCENARY_TEMPLATES = [
         "ability": "shield_wall",
         "ability_desc": "Shield Wall: block and reduce your damage taken.",
         "ai_style": "defensive",
+        "combat_role": "melee",
     },
     {
         "id": "ember",
@@ -296,8 +320,35 @@ MERCENARY_TEMPLATES = [
         "ability": "arc_bolt",
         "ability_desc": "Arc Bolt: reliable magical hit for 5 damage.",
         "ai_style": "tricky",
+        "combat_role": "ranged",
     },
 ]
+
+
+def role_has_advantage(attacker_role, defender_role):
+    if not attacker_role or not defender_role:
+        return False
+    if attacker_role not in COMBAT_ROLES or defender_role not in COMBAT_ROLES:
+        return False
+    return ROLE_BEATS.get(attacker_role) == defender_role
+
+
+def role_damage_bonus(attacker, defender):
+    attacker_role = getattr(attacker, "combat_role", None)
+    defender_role = getattr(defender, "combat_role", None)
+    if role_has_advantage(attacker_role, defender_role):
+        return ROLE_ADVANTAGE_BONUS
+    return 0
+
+
+def format_combat_role(role):
+    return role.capitalize() if role in COMBAT_ROLES else ""
+
+
+def normalize_combat_role(role):
+    if isinstance(role, str) and role.lower() in COMBAT_ROLES:
+        return role.lower()
+    return DEFAULT_COMBAT_ROLE
 
 
 def mercenary_power_rating(template):
@@ -344,6 +395,7 @@ class Combatant:
         flavor="",
         ai_style="balanced",
         enemy_type="",
+        combat_role=None,
     ):
         self.name = name
         self.attack = attack
@@ -354,6 +406,7 @@ class Combatant:
         self.flavor = flavor
         self.ai_style = ai_style
         self.enemy_type = enemy_type
+        self.combat_role = combat_role
 
     def alive(self):
         return self.health > 0
@@ -367,6 +420,8 @@ class Mercenary:
         self.name = template["name"]
         self.race = template["race"]
         self.role = template["role"]
+        combat_role = template.get("combat_role", "melee")
+        self.combat_role = combat_role if combat_role in COMBAT_ROLES else "melee"
         self.attack = template["attack"]
         self.defense = template["defense"]
         self.health = template["health"]
@@ -383,7 +438,7 @@ class Mercenary:
 
     def to_combatant(self):
         """Lightweight view for shared damage math."""
-        return Combatant(self.name, self.attack, self.defense, self.health)
+        return Combatant(self.name, self.attack, self.defense, self.health, combat_role=self.combat_role)
 
     def power_rating(self):
         return mercenary_power_rating(self.template)
@@ -411,6 +466,7 @@ class BattleApp:
         self.player_xp = 0
         self.enemy_level = 1
         self.coins = 10
+        self.selected_difficulty = DEFAULT_DIFFICULTY
         self.enemy = self.make_enemy(self.enemy_level)
         self.in_combat = False
         self.in_preparation = False
@@ -423,7 +479,7 @@ class BattleApp:
 
         # Build, race, equipment, and bonus tracking.
         self.selected_race = "Human"
-        self.selected_difficulty = DEFAULT_DIFFICULTY
+        self.selected_combat_role = DEFAULT_COMBAT_ROLE
         self.stat_bonuses = {"attack": 0, "defense": 0, "health": 0}
         self.equipment = {slot: None for slot in EQUIPMENT_SLOTS}
         self.inventory = []
@@ -550,6 +606,21 @@ class BattleApp:
         self.difficulty_combo.bind("<<ComboboxSelected>>", self.on_difficulty_changed)
         self.difficulty_desc_var = tk.StringVar()
         ttk.Label(self.creation_frame, textvariable=self.difficulty_desc_var, wraplength=480).pack(pady=(4, 8))
+        combat_role_row = ttk.Frame(self.creation_frame)
+        combat_role_row.pack(pady=4)
+        ttk.Label(combat_role_row, text="Combat Role:").pack(side=tk.LEFT, padx=(0, 8))
+        self.combat_role_var = tk.StringVar(value=format_combat_role(self.selected_combat_role))
+        self.combat_role_combo = ttk.Combobox(
+            combat_role_row,
+            textvariable=self.combat_role_var,
+            values=[format_combat_role(role) for role in COMBAT_ROLES],
+            state="readonly",
+            width=14,
+        )
+        self.combat_role_combo.pack(side=tk.LEFT)
+        self.combat_role_combo.bind("<<ComboboxSelected>>", self.on_combat_role_changed)
+        self.combat_role_desc_var = tk.StringVar()
+        ttk.Label(self.creation_frame, textvariable=self.combat_role_desc_var, wraplength=480).pack(pady=(4, 8))
         self.creation_points_var = tk.StringVar(value="Points left: 15")
         ttk.Label(self.creation_frame, textvariable=self.creation_points_var, font=("Segoe UI", 11, "bold")).pack()
         rows = ttk.Frame(self.creation_frame)
@@ -1375,6 +1446,7 @@ class BattleApp:
             self.player.health += max_health - old_max
         self.player.max_health = max_health
         self.player.health = min(self.player.health, self.player.max_health)
+        self.player.combat_role = self.selected_combat_role
 
     def init_starting_equipment(self):
         """Equip the default starting loadout or gear from a saved build."""
@@ -1530,12 +1602,12 @@ class BattleApp:
             if slot < len(self.active_mercenaries):
                 merc = self.active_mercenaries[slot]
                 if merc.fallen:
-                    label = f"{merc.name} ({merc.role}) — FALLEN"
+                    label = f"{merc.name} ({merc.role} · {format_combat_role(merc.combat_role)}) — FALLEN"
                     hp_text = "Fallen — revive at Recruit"
                     action_text = merc.ability_desc
                     bar_max, bar_val = merc.max_health, 0
                 else:
-                    label = f"{merc.name} ({merc.race} {merc.role})"
+                    label = f"{merc.name} ({merc.race} {merc.role} · {format_combat_role(merc.combat_role)})"
                     hp_text = f"HP: {merc.health} / {merc.max_health}  ATK {merc.attack}  DEF {merc.defense}"
                     action_text = f"Last: {merc.last_action}"
                     bar_max, bar_val = merc.max_health, max(0, merc.health)
@@ -1578,8 +1650,9 @@ class BattleApp:
         else:
             for template in self.recruitment_pool:
                 cost = mercenary_hire_cost(template)
+                template_role = format_combat_role(template.get("combat_role", "melee"))
                 detail = (
-                    f"{template['name']} — {template['race']} {template['role']} | "
+                    f"{template['name']} — {template['race']} {template['role']} · {template_role} | "
                     f"ATK {template['attack']} DEF {template['defense']} HP {template['health']} | "
                     f"{template['ability_desc']}"
                 )
@@ -1601,7 +1674,7 @@ class BattleApp:
                 status = "Fallen" if merc.fallen else f"{merc.health}/{merc.max_health} HP"
                 ttk.Label(
                     self.recruit_party_frame,
-                    text=f"{merc.name} ({merc.race} {merc.role}) — {status} — {merc.ability_desc}",
+                    text=f"{merc.name} ({merc.race} {merc.role} · {format_combat_role(merc.combat_role)}) — {status} — {merc.ability_desc}",
                     wraplength=420,
                 ).pack(anchor="w", pady=2)
 
@@ -1711,6 +1784,7 @@ class BattleApp:
             self.log(f"{mercenary.name} fortifies and recovers 3 HP.")
         elif ability == "volley":
             damage = max(2, mercenary.attack - max(0, self.enemy.defense - 2))
+            damage = max(1, damage + role_damage_bonus(mercenary.to_combatant(), self.enemy))
             self.enemy.health -= damage
             mercenary.last_action = f"Volley ({damage} dmg)"
             self.log(f"{mercenary.name} looses a volley for {damage} damage!")
@@ -1745,7 +1819,7 @@ class BattleApp:
             self.log(f"{mercenary.name} raises a shield wall — your next hit is softened.")
             self._player_damage_reduction_next = True
         elif ability == "arc_bolt":
-            damage = 5
+            damage = max(1, 5 + role_damage_bonus(mercenary.to_combatant(), self.enemy))
             self.enemy.health -= damage
             mercenary.last_action = f"Arc Bolt ({damage} dmg)"
             self.log(f"{mercenary.name} casts Arc Bolt for {damage} damage!")
@@ -1895,10 +1969,13 @@ class BattleApp:
         self.creation_health_points = 0
         self.selected_race = "Human"
         self.selected_difficulty = DEFAULT_DIFFICULTY
+        self.selected_combat_role = DEFAULT_COMBAT_ROLE
         if hasattr(self, "race_var"):
             self.race_var.set(self.selected_race)
         if hasattr(self, "difficulty_var"):
             self.difficulty_var.set(self.selected_difficulty)
+        if hasattr(self, "combat_role_var"):
+            self.combat_role_var.set(format_combat_role(self.selected_combat_role))
         self.show_character_creation_screen()
 
     def quit_game(self):
@@ -1915,6 +1992,7 @@ class BattleApp:
             "defense": self.creation_defense_points,
             "health": self.creation_health_points,
             "difficulty": self.selected_difficulty,
+            "combat_role": self.selected_combat_role,
             "equipment": {slot: (dict(item) if item else None) for slot, item in self.equipment.items()},
         }
 
@@ -1980,9 +2058,19 @@ class BattleApp:
             "flavor": self.enemy.flavor,
             "ai_style": self.enemy.ai_style,
             "enemy_type": self.enemy.enemy_type,
+            "combat_role": self.enemy.combat_role,
         }
 
     def enemy_from_dict(self, data):
+        combat_role = data.get("combat_role")
+        if combat_role not in COMBAT_ROLES:
+            enemy_type = data.get("enemy_type", "")
+            combat_role = "melee"
+            for theme in self.enemy_themes:
+                if theme["name"] == enemy_type:
+                    theme_role = theme.get("combat_role", "melee")
+                    combat_role = theme_role if theme_role in COMBAT_ROLES else "melee"
+                    break
         enemy = Combatant(
             data["name"],
             data["attack"],
@@ -1992,6 +2080,7 @@ class BattleApp:
             flavor=data.get("flavor", ""),
             ai_style=data.get("ai_style", "balanced"),
             enemy_type=data.get("enemy_type", ""),
+            combat_role=combat_role,
         )
         enemy.health = data["health"]
         return enemy
@@ -2005,6 +2094,7 @@ class BattleApp:
                 "defense": self.creation_defense_points,
                 "health": self.creation_health_points,
                 "difficulty": self.selected_difficulty,
+                "combat_role": self.selected_combat_role,
             },
             "run": {
                 "player_level": self.player_level,
@@ -2052,6 +2142,7 @@ class BattleApp:
         self.selected_race = race
         difficulty = build.get("difficulty", DEFAULT_DIFFICULTY)
         self.selected_difficulty = difficulty if difficulty in DIFFICULTIES else DEFAULT_DIFFICULTY
+        self.selected_combat_role = normalize_combat_role(build.get("combat_role", DEFAULT_COMBAT_ROLE))
         self.creation_attack_points = int(build.get("attack", 0))
         self.creation_defense_points = int(build.get("defense", 0))
         self.creation_health_points = int(build.get("health", 0))
@@ -2201,6 +2292,9 @@ class BattleApp:
         self.selected_difficulty = difficulty if difficulty in DIFFICULTIES else DEFAULT_DIFFICULTY
         if hasattr(self, "difficulty_var"):
             self.difficulty_var.set(self.selected_difficulty)
+        self.selected_combat_role = normalize_combat_role(data.get("combat_role", DEFAULT_COMBAT_ROLE))
+        if hasattr(self, "combat_role_var"):
+            self.combat_role_var.set(format_combat_role(self.selected_combat_role))
         self.creation_attack_points = attack
         self.creation_defense_points = defense
         self.creation_health_points = health
@@ -2235,6 +2329,10 @@ class BattleApp:
         self.selected_difficulty = self.difficulty_var.get()
         if self.selected_difficulty not in DIFFICULTIES:
             self.selected_difficulty = DEFAULT_DIFFICULTY
+        self.update_creation_screen()
+
+    def on_combat_role_changed(self, _event=None):
+        self.selected_combat_role = normalize_combat_role(self.combat_role_var.get())
         self.update_creation_screen()
 
     def get_difficulty_mods(self):
@@ -2279,6 +2377,11 @@ class BattleApp:
         self.race_desc_var.set(RACES[self.selected_race]["desc"])
         if hasattr(self, "difficulty_desc_var"):
             self.difficulty_desc_var.set(DIFFICULTIES[self.selected_difficulty]["desc"])
+        if hasattr(self, "combat_role_var"):
+            self.selected_combat_role = normalize_combat_role(self.combat_role_var.get())
+            self.combat_role_var.set(format_combat_role(self.selected_combat_role))
+        if hasattr(self, "combat_role_desc_var"):
+            self.combat_role_desc_var.set(COMBAT_ROLE_DESCS[self.selected_combat_role])
         attack, defense, health = self.compute_preview_stats()
         self.preview_attack_var.set(f"Attack: {attack}")
         self.preview_defense_var.set(f"Defense: {defense}")
@@ -2292,6 +2395,8 @@ class BattleApp:
             self.selected_difficulty = self.difficulty_var.get()
             if self.selected_difficulty not in DIFFICULTIES:
                 self.selected_difficulty = DEFAULT_DIFFICULTY
+        if hasattr(self, "combat_role_var"):
+            self.selected_combat_role = normalize_combat_role(self.combat_role_var.get())
 
         self.reset_run_state()
         self.run_started = True
@@ -2301,7 +2406,10 @@ class BattleApp:
         self.log_box.configure(state=tk.NORMAL)
         self.log_box.delete(1.0, tk.END)
         self.log_box.configure(state=tk.DISABLED)
-        self.log(f"A new run begins as a {self.selected_race} warrior on {self.selected_difficulty} difficulty.")
+        role_label = format_combat_role(self.selected_combat_role)
+        self.log(
+            f"A new run begins as a {self.selected_race} {role_label} warrior on {self.selected_difficulty} difficulty."
+        )
         self.log("Your chosen build is ready. The arena calls your name.")
         self.log("Take your time in preparation — Shop and Recruit are open before each duel.")
         self.log("Combat begins when you choose your first move.")
@@ -2412,6 +2520,7 @@ class BattleApp:
             f"Race: {self.selected_race} — {race['desc']}\n\n"
             f"Point Allocation: {self.creation_attack_points} ATK / "
             f"{self.creation_defense_points} DEF / {self.creation_health_points} HP\n"
+            f"Combat Role: {format_combat_role(self.selected_combat_role)}\n"
             f"Run Level: {self.player_level}  |  XP: {self.player_xp} / {self.player_level * 10}  |  "
             f"Coins: {self.coins}\n\n"
             f"Base (race + points): {base_atk} ATK / {base_def} DEF / {base_hp} HP\n"
@@ -2442,14 +2551,14 @@ class BattleApp:
             for merc in self.active_mercenaries:
                 status = "Fallen" if merc.fallen else f"{merc.health}/{merc.max_health} HP"
                 merc_lines.append(
-                    f"• {merc.name} ({merc.race} {merc.role}) — {status}\n  {merc.ability_desc}"
+                    f"• {merc.name} ({merc.race} {merc.role} · {format_combat_role(merc.combat_role)}) — {status}\n  {merc.ability_desc}"
                 )
         else:
             merc_lines.append("No active mercenaries. Hire allies at Recruit between fights.")
         if self.fallen_mercenaries:
             merc_lines.append("\nFallen (revivable):")
             for merc in self.fallen_mercenaries:
-                merc_lines.append(f"• {merc.name} ({merc.role})")
+                merc_lines.append(f"• {merc.name} ({merc.role} · {format_combat_role(merc.combat_role)})")
         self.char_merc_var.set("\n".join(merc_lines))
         self.refresh_character_inventory()
 
@@ -2769,11 +2878,13 @@ class BattleApp:
         if show_preview:
             style_label = self._enemy_ai_style_label(self.enemy.ai_style)
             flavor = self.enemy.flavor or "No scouting report available."
+            role_label = format_combat_role(self.enemy.combat_role)
             self.enemy_preview_var.set(
                 f"Name: {self.enemy.enemy_type}\n"
                 f"Level: {self.enemy.level}\n"
                 f"Attack: {self.enemy.attack}  Defense: {self.enemy.defense}\n"
                 f"Max HP: {self.enemy.max_health}\n"
+                f"Role: {role_label}\n"
                 f"AI Style: {style_label}\n\n"
                 f"{flavor}"
             )
@@ -2784,12 +2895,16 @@ class BattleApp:
     def refresh_stats(self):
         self.player_health_var.set(f"HP: {self.player.health} / {self.player.max_health}")
         self.enemy_health_var.set(f"HP: {self.enemy.health} / {self.enemy.max_health}")
-        self.player_stats_var.set(f"Attack {self.player.attack}  Defense {self.player.defense}")
+        player_role = format_combat_role(self.player.combat_role or self.selected_combat_role)
+        self.player_stats_var.set(
+            f"Attack {self.player.attack}  Defense {self.player.defense}  Role: {player_role}"
+        )
         self.player_equipment_var.set(self.equipment_summary_text())
         self.enemy_stats_var.set(f"Attack {self.enemy.attack}  Defense {self.enemy.defense}")
         self.enemy_banner_var.set(f"{self.enemy.enemy_type}  —  Level {self.enemy.level}")
         style_label = self._enemy_ai_style_label(self.enemy.ai_style)
-        self.enemy_type_var.set(f"Type: {style_label}")
+        role_label = format_combat_role(self.enemy.combat_role)
+        self.enemy_type_var.set(f"Type: {style_label} · {role_label}")
         self.progress_level_var.set(f"Level: {self.player_level}")
         self.progress_xp_var.set(f"XP: {self.player_xp} / {self.player_level * 10}")
         self.progress_coins_var.set(f"Coins: {self.coins}")
@@ -2823,6 +2938,9 @@ class BattleApp:
         attack = max(1, attack + diff["attack_mod"])
         defense = max(0, defense + diff["defense_mod"])
         health = max(1, health + diff["health_mod"])
+        combat_role = theme.get("combat_role", "melee")
+        if combat_role not in COMBAT_ROLES:
+            combat_role = "melee"
         return Combatant(
             f"{theme['name']} (Lv {level})",
             attack,
@@ -2832,6 +2950,7 @@ class BattleApp:
             flavor=theme["flavor"],
             ai_style=theme["ai_style"],
             enemy_type=theme["name"],
+            combat_role=combat_role,
         )
 
     def show_level_up_dialog(self):
@@ -3031,14 +3150,14 @@ class BattleApp:
     def compute_damage(self, attacker, defender, blocked=False):
         base = max(1, attacker.attack - defender.defense)
         if blocked:
-            return max(1, base - BLOCK_DAMAGE_REDUCTION)
-        return base
+            base = max(1, base - BLOCK_DAMAGE_REDUCTION)
+        return max(1, base + role_damage_bonus(attacker, defender))
 
     def compute_power_damage(self, attacker, defender, enemy_blocked):
         base = max(1, attacker.attack - defender.defense) + POWER_STRIKE_BONUS
         if enemy_blocked:
-            return max(1, base - BLOCK_DAMAGE_REDUCTION // 2)
-        return base
+            base = max(1, base - BLOCK_DAMAGE_REDUCTION // 2)
+        return max(1, base + role_damage_bonus(attacker, defender))
 
     def apply_rest_heal(self):
         if self.player.health < self.player.max_health:
