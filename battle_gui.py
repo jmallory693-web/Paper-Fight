@@ -1084,14 +1084,14 @@ class BattleApp:
         custom = self._read_custom_file_lists()
         base_ids = {entry["id"] for entry in SHOP_EQUIPMENT}
         if item_id in base_ids:
-            removed = list(custom["removed_items"])
+            removed = list(custom["removed_shop_items"])
             if item_id not in removed:
                 removed.append(item_id)
         else:
             custom["custom_items"] = [
                 entry for entry in custom["custom_items"] if entry.get("id") != item_id
             ]
-            removed = custom["removed_items"]
+            removed = custom["removed_shop_items"]
 
         self.save_custom_content(
             custom["custom_items"],
@@ -1161,7 +1161,7 @@ class BattleApp:
             custom["custom_items"],
             custom["custom_mercs"],
             custom["custom_enemies"],
-            removed_shop_items=custom["removed_items"],
+            removed_shop_items=custom["removed_shop_items"],
             removed_enemies=custom["removed_enemies"],
         )
         self.refresh_admin_lists()
@@ -1743,13 +1743,18 @@ class BattleApp:
                 window.destroy()
             setattr(self, attr, None)
 
-    def return_to_main_menu(self):
+    def _prompt_save_run_before_leave(self, title, prompt):
         if self.run_started and self.player.alive():
-            choice = messagebox.askyesnocancel("Main Menu", "Save Run before leaving?")
+            choice = messagebox.askyesnocancel(title, prompt)
             if choice is None:
-                return
+                return False
             if choice and not self.save_run_to_file(show_message=True):
-                return
+                return False
+        return True
+
+    def return_to_main_menu(self):
+        if not self._prompt_save_run_before_leave("Main Menu", "Save Run before leaving?"):
+            return
         self._finish_return_to_main_menu()
 
     def _finish_return_to_main_menu(self):
@@ -1772,6 +1777,8 @@ class BattleApp:
         self.show_character_creation_screen()
 
     def quit_game(self):
+        if not self._prompt_save_run_before_leave("Quit", "Save Run before quitting?"):
+            return
         self.root.destroy()
 
     def build_build_save_data(self):
@@ -1932,7 +1939,7 @@ class BattleApp:
         self.inventory = [dict(item) for item in run.get("inventory", [])]
         self.player = Combatant(f"{self.selected_race} Warrior", BASE_ATTACK, BASE_DEFENSE, BASE_HEALTH)
         self.apply_player_stats()
-        self.player.health = int(run.get("player_health", self.player.max_health))
+        self.player.health = max(1, min(int(run.get("player_health", self.player.max_health)), self.player.max_health))
         self.player_level = int(run.get("player_level", 1))
         self.player_xp = int(run.get("player_xp", 0))
         self.coins = int(run.get("coins", 10))
@@ -1967,17 +1974,42 @@ class BattleApp:
         if not os.path.exists(self.run_save_path):
             messagebox.showinfo("No Run Found", "No saved run was found yet.")
             return
-        with open(self.run_save_path, "r", encoding="utf-8") as handle:
-            data = json.load(handle)
+        try:
+            with open(self.run_save_path, "r", encoding="utf-8") as handle:
+                data = json.load(handle)
+        except OSError as exc:
+            messagebox.showerror("Load Run", f"Could not read the save file:\n{exc}")
+            return
+        except json.JSONDecodeError as exc:
+            messagebox.showerror("Load Run", f"The saved run file is corrupt or malformed:\n{exc}")
+            return
+        if not isinstance(data, dict):
+            messagebox.showerror("Load Run", "The saved run file is corrupt or malformed.")
+            return
         if data.get("version") != RUN_SAVE_VERSION:
             messagebox.showinfo("Load Run", "This save file is from an incompatible version.")
             return
         build = data.get("build", {})
-        total = int(build.get("attack", 0)) + int(build.get("defense", 0)) + int(build.get("health", 0))
+        if not isinstance(build, dict):
+            messagebox.showerror("Load Run", "The saved run file is missing a valid build section.")
+            return
+        try:
+            total = int(build.get("attack", 0)) + int(build.get("defense", 0)) + int(build.get("health", 0))
+        except (TypeError, ValueError):
+            messagebox.showerror("Load Run", "The saved run has a malformed build.")
+            return
         if total != 15:
             messagebox.showinfo("Load Run", "The saved run has an invalid build.")
             return
-        self.apply_run_save_data(data)
+        run = data.get("run")
+        if not isinstance(run, dict) or "enemy" not in run:
+            messagebox.showerror("Load Run", "The saved run file is missing required run data.")
+            return
+        try:
+            self.apply_run_save_data(data)
+        except (KeyError, TypeError, ValueError) as exc:
+            messagebox.showerror("Load Run", f"The saved run file is corrupt or malformed:\n{exc}")
+            return
         self.run_started = True
         self.update_menu_buttons()
         self.show_battle_screen()
@@ -1998,11 +2030,25 @@ class BattleApp:
         if not os.path.exists(path):
             messagebox.showinfo("No Build Found", "No saved build was found yet.")
             return
-        with open(path, "r", encoding="utf-8") as handle:
-            data = json.load(handle)
-        attack = int(data.get("attack", 0))
-        defense = int(data.get("defense", 0))
-        health = int(data.get("health", 0))
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                data = json.load(handle)
+        except OSError as exc:
+            messagebox.showerror("Load Build", f"Could not read the build file:\n{exc}")
+            return
+        except json.JSONDecodeError as exc:
+            messagebox.showerror("Load Build", f"The saved build file is corrupt or malformed:\n{exc}")
+            return
+        if not isinstance(data, dict):
+            messagebox.showerror("Load Build", "The saved build file is corrupt or malformed.")
+            return
+        try:
+            attack = int(data.get("attack", 0))
+            defense = int(data.get("defense", 0))
+            health = int(data.get("health", 0))
+        except (TypeError, ValueError):
+            messagebox.showerror("Load Build", "The saved build file has malformed stat values.")
+            return
         race = data.get("race", "Human")
         if race not in RACES:
             race = "Human"
@@ -2017,9 +2063,17 @@ class BattleApp:
         self.creation_points_left = 0
         self.saved_equipment_from_build = None
         if data.get("version") == BUILD_SAVE_VERSION and "equipment" in data:
-            self.saved_equipment_from_build = {
-                slot: (dict(item) if item else None) for slot, item in data["equipment"].items()
-            }
+            equipment = data.get("equipment")
+            if not isinstance(equipment, dict):
+                messagebox.showerror("Load Build", "The saved build file has malformed equipment data.")
+                return
+            try:
+                self.saved_equipment_from_build = {
+                    slot: (dict(item) if item else None) for slot, item in equipment.items()
+                }
+            except (TypeError, ValueError):
+                messagebox.showerror("Load Build", "The saved build file has malformed equipment data.")
+                return
         self.build_active = True
         self.update_menu_buttons()
         self.confirm_character_creation()
@@ -2824,7 +2878,7 @@ class BattleApp:
             "custom_items": data.get("shop_items", []),
             "custom_mercs": data.get("mercenaries", []),
             "custom_enemies": data.get("enemies", []),
-            "removed_items": data.get("removed_shop_items", []),
+            "removed_shop_items": data.get("removed_shop_items", []),
             "removed_enemies": data.get("removed_enemies", []),
         }
 
